@@ -1,0 +1,22 @@
+#!/bin/bash
+if [[ "$2" != "" ]];then
+  period=$2
+else
+  period=4
+fi
+if [[ "$1" != "" ]];then
+  ed=$(timeout 5s openssl s_client -connect $1:443 -servername $1 2>/dev/null </dev/null | openssl x509 -noout -enddate|cut -d= -f2)
+  d=$(date --date="$ed" +"%s")
+  #echo $d = `date --date="@$d"`
+
+  #is it time?
+  t=`date --date="$ed -$period days" +%s`
+  #echo $t = `date --date="@$t"`
+
+  if [[ "`date +%s`" > "$t"  ]];then
+    echo "$1 #(expires on `date --date="@$d"`) ALERT"
+  else
+    echo "OK: $1 (expires on `date --date="@$d"`)"
+  fi
+
+fi
