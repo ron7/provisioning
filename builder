@@ -37,7 +37,7 @@ if ! grep "^\*\ hard\ nofile\ 65000" /etc/security/limits.conf;then echo '* hard
 if ! grep "^rlimit_files" /etc/php/7.2/fpm/php-fpm.conf;then sed -i '/daemonize/a rlimit_files = 64000' /etc/php/7.2/fpm/php-fpm.conf;fi
 
 # nginx level limits for open files
-if ! grep "^(\s+)?worker_rlimit_nofile" /etc/nginx/nginx.conf;then sed -i '/worker_processes/a worker_rlimit_nofile 64000;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?worker_rlimit_nofile" /etc/nginx/nginx.conf;then sed -i '/worker_processes/a worker_rlimit_nofile 64000;' /etc/nginx/nginx.conf;fi
 
 #some more nginx global vars
 if ! grep -E "^(\s+)?gzip_disable" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_disable     "msie6";' /etc/nginx/nginx.conf;fi
