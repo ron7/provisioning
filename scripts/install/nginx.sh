@@ -26,7 +26,7 @@ bash <(curl -f -L -sS https://ngxpagespeed.com/install)  --nginx-version latest 
 mkdir /etc/nginx/sites-available
 mkdir /etc/nginx/sites-enabled
 if [ ! grep sites-enabled /etc/nginx/nginx.conf ]; then
-    line=$((`grep -n "}" /etc/nginx/nginx.conf|tail -n1|cut -d ":" -f1`-1));sed -i "${line}i\\tinclude /etc/nginx/sites-enabled/*;" /etc/nginx/nginx.conf;
+    line=$((`grep -n "}" /etc/nginx/nginx.conf|tail -n1|cut -d ":" -f1`-1));sed -i "${line}i\    include /etc/nginx/sites-enabled/*.*;" /etc/nginx/nginx.conf;
 fi
 
 # create systems service, enable it and start it
