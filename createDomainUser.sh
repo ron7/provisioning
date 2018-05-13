@@ -1,29 +1,28 @@
 #!/usr/bin/env bash
+PHP_VER=7.2
+
+if ! nginx -v;then echo -e "\n::: nginx missing, aborting\n\n";exit 1;fi
+if ! php-fpm${PHP_VER} -v;then echo -e "\n::: php missing, aborting\n\n";exit 1;fi
+
 if [ "$1" != "" ]; then
-#echo first argument is $1
-echo Domain is: $1
-echo User is: $2
-#echo Optional ID is: $3
-currentpath=`pwd`
-#install php5-fpm
-echo Creating user $2:
-groupadd $2
-useradd -s /bin/false -d /home/$2 -m -g $2 $2
-mkdir -p /home/$2/www;mkdir -p /home/$2/dev;touch /home/$2/www/index.php;touch /home/$2/dev/index.php;chmod 751 /home/$2/www /home/$2/dev;chown -R $2.$2 /home/$2/*
-echo
-echo Domain contents should be in /home/$2/www/
-echo
-id=`id $2 -u`
-#port=$(($id+8000))
-mkdir -p /etc/nginx/sites-enabled/;mkdir -p /etc/nginx/sites-available/
-echo Creating NginX config file: /etc/nginx/sites-available/$1.conf
-cat > /etc/nginx/sites-available/$1.conf <<ENDD
+  echo Domain is: $1
+  echo User is: $2
+  currentpath=`pwd`
+  echo Creating user $2:
+  groupadd $2
+  useradd -s /bin/false -d /home/$2 -m -g $2 $2
+  mkdir -p /home/$2/www;mkdir -p /home/$2/dev;touch /home/$2/www/index.php;touch /home/$2/dev/index.php;chmod 751 /home/$2/www /home/$2/dev;chown -R $2.$2 /home/$2/*
+  echo -e "\nDomain contents should be in /home/$2/www/\n"
+  id=`id $2 -u`
+  mkdir -p /etc/nginx/sites-enabled/;mkdir -p /etc/nginx/sites-available/
+  echo Creating NginX config file: /etc/nginx/sites-available/$1.conf
+  cat > /etc/nginx/sites-available/$1.conf <<ENDD
 #limit_req_zone \$binary_remote_addr zone=one:10m rate=20r/m;
 #limit_rate 300K; limit_conn_zone \$binary_remote_addr zone=two:4m;
 server {
     server_name  www.$1;
     rewrite ^(.*) http://$1\$1 permanent;
-}
+  }
 server {
   set \$rewritetossl 1;
   set \$enablessl 1; #not working yet
@@ -38,7 +37,7 @@ server {
 
 #  ## SSL: forcing SSL:
 #      if (\$check_ssl_prot = P) {
-#         rewrite ^   https://\$server_name\$request_uri? permanent;
+#         rewrite ^   https://\$server_name\$request_uri permanent;
 #      }
 
 ##  if (\$enablessl = 1) {
@@ -56,7 +55,7 @@ server {
 #    ssl_session_tickets on;
 #    ssl_stapling on;
 #    ssl_stapling_verify on;
-#    resolver 8.8.8.8 8.8.4.4 valid=300s;
+#    resolver 1.1.1.1 8.8.8.8 valid=300s;
 #    resolver_timeout 5s;
 
 #  ## SSL END
@@ -66,6 +65,7 @@ server {
   error_log /var/log/nginx/$1_error.log;
   index index.php index.html;
 
+#  include include_cache.conf;
 
   if (\$request_method !~ ^(GET|HEAD|POST)$ ) { return 444;  }
 
@@ -76,7 +76,7 @@ server {
     location ~ /.well-known { allow all;}
     location ~ /\\. { deny  all; access_log off; log_not_found off; }
     location ~* ^/(?:README|LICENSE[^.]*|LEGALNOTICE)(?:\\.txt)*$ {  return 404;  }
-    location ~* ^.+.(jpg|jpeg|gif|png|ico|css|tgz|gz|rar|bz2|doc|xls|exe|pdf|ppt|txt|tar|mid|midi|wav|bmp|rtf|js)$ {
+    location ~* ^.+.(jpg|jpeg|gif|png|ico|css|js)$ {
     valid_referers server_names;
     if (\$invalid_referer)  { return 444; }
       expires    max;
@@ -97,7 +97,6 @@ server {
 
 
     location / {
-#   root /home/$2/www;
     index index.php index.html;
     try_files \$uri \$uri/ /index.php?q=\$uri;
 
@@ -127,8 +126,8 @@ server {
 #  fastcgi_cache_key \$host\$request_uri;
   fastcgi_pass   unix:/var/run/php-fpm_$2.sock;
   fastcgi_index  index.php;
-#  fastcgi_param  SCRIPT_FILENAME  \$document_root\$fastcgi_script_name;
-  fastcgi_param  SCRIPT_FILENAME  \$fastcgi_script_name;
+  fastcgi_param  SCRIPT_FILENAME  \$document_root\$fastcgi_script_name;
+#  fastcgi_param  SCRIPT_FILENAME  \$fastcgi_script_name;
   fastcgi_param  SCRIPT_NAME  \$fastcgi_script_name;
   include fastcgi_params;
   fastcgi_param USER  $2;
@@ -152,7 +151,7 @@ server {
   location = /robots.txt { access_log off; log_not_found off; }
   location ~ /\\. { deny  all; access_log off; log_not_found off; }
   location ~* ^/(?:README|LICENSE[^.]*|LEGALNOTICE)(?:\\.txt)*$ {  return 404;  }
-  location ~* ^.+.(jpg|jpeg|gif|png|ico|css|tgz|gz|rar|bz2|doc|xls|exe|pdf|ppt|txt|tar|mid|midi|wav|bmp|rtf|js)$ {
+  location ~* ^.+.(jpg|jpeg|gif|png|ico|css|js)$ {
   valid_referers server_names;
   if (\$invalid_referer)  { return 444; }
     expires    max;
@@ -164,30 +163,29 @@ server {
   location / {
   index index.php index.html;
   try_files \$uri \$uri/ /index.php?q=\$uri;
-      }
+}
 
       location ~ \.php$ {
       fastcgi_cache_key \$host\$request_uri;
       fastcgi_pass   unix:/var/run/php-fpm_$2.sock;
       fastcgi_index  index.php;
       fastcgi_param  SCRIPT_FILENAME  \$document_root\$fastcgi_script_name;
-      fastcgi_param  SCRIPT_FILENAME  \$fastcgi_script_name;
+    #  fastcgi_param  SCRIPT_FILENAME  \$fastcgi_script_name;
       fastcgi_param  SCRIPT_NAME  \$fastcgi_script_name;
       include fastcgi_params;
       fastcgi_param USER  $2;
       fastcgi_read_timeout 600;
     }
-}
+  }
 
 ENDD
-echo Done. This file can be edited to add additional features !!
-echo Creating NginX SymLink...
+echo Creating Nginx links...
 cd /etc/nginx/sites-enabled/
 ln -s ../sites-available/$1.conf $1.conf
 cd $currentpath
 echo Adding pool to php-fpm...
-mkdir -p /etc/php/7.2/fpm/pool.d/
-cat > /etc/php/7.2/fpm/pool.d/$2.conf <<ENDD
+mkdir -p /etc/php/${PHP_VER}/fpm/pool.d/
+cat > /etc/php/${PHP_VER}/fpm/pool.d/$2.conf <<ENDD
 [$2]
 listen.owner = $2
 listen.group = $2
@@ -206,24 +204,12 @@ ENDD
 if  [[ -z `grep "SCRIPT_FILENAME" /etc/nginx/fastcgi_params`  ]];then sed -i '/SCRIPT_NAME/i fastcgi_param  SCRIPT_FILENAME    \$document_root\$fastcgi_script_name;' /etc/nginx/fastcgi_params ;fi
 
 echo Reloading services:
-#/etc/init.d/nginx reload
 service nginx reload
-/etc/init.d/php7.2-fpm reload
-
-#echo Adding $1 to Piwik, with ID:
-#piwikid=`curl -sk "https://7.xron.net/index.php?module=API&method=SitesManager.addSite&siteName=$1&urls=http://$1&format=JSON&token_auth=446ef1efb369403c57f45ca6214dfe56"|grep -o '[0-9]*'`
-#echo $piwikid
-#echo add the following to cron:
-##!/bin/bash
-#echo python /home/dev/www/dev/7/misc/log-analytics/import_logs.py --url=http://7.xron.net/ /var/log/nginx/$1* --idsite=$piwikid --recorders=4 --enable-http-redirects --enable-http-errors --enable-bots --enable-static --recorder-max-payload-size=300 --log-format-name=ncsa_extended
-#echo wait
-#echo php /home/dev/www/dev/7/console core:archive --url=http://7.xron.net/ \>\> /var/log/piwik_\`date +\\%G-\\%m-\\%d\`-archive.log
-#echo I think it is all done
-
+service php${PHP_VER}-fpm reload
 
 else
-echo Usage: $0 domain.com username
-echo Example: $0 xron.net xron
-echo All 2 parameters must be present !
+  echo Usage: $0 domain.com username
+  echo Example: $0 xron.net xron
+  echo All 2 parameters must be present !
 fi
 
