@@ -1,4 +1,4 @@
-#!/usr/bin/env bash s
+#!/usr/bin/env bash
 if [ "$1" != "" ]; then
 #echo first argument is $1
 echo Domain is: $1
