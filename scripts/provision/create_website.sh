@@ -30,8 +30,11 @@ USER="${USER}"
 DOMAIN="${DOMAIN}"
 PUBLIC_HTML="/home/${USER}/www/${DOMAIN}/public_html"
 PUBLIC_HTML_ESCAPED="\/home\/${USER}\/www\/${DOMAIN}\/public_html"
+PHP_VERSION="7.2"
 
 source ./create_user.sh
+
+source ./create_php-fpm_pool.sh
 
 source ./create_domain.sh
 
