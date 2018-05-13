@@ -20,16 +20,26 @@ ExecStart=/usr/sbin/nginx
 ExecReload=/usr/sbin/nginx -s reload
 ExecStop=/bin/kill -s QUIT $MAINPID
 PrivateTmp=true
+LimitNOFILE=65536
 
 [Install]
 WantedBy=multi-user.target
 
 ENDD
 
-systemctl enable --now nginx
 
 apt install -y php7.2-cli php7.2-common php7.2-curl php7.2-fpm php7.2-gd php7.2-intl php7.2-json php7.2-ldap php7.2-mbstring php7.2-mysql php7.2-opcache php7.2-readline php7.2-sqlite3 php7.2-xml php7.2-xmlrpc php7.2-zip mariadb-server
 
+# user level limits for open files
+if ! grep "^\*\ soft\ nofile\ 64000" /etc/security/limits.conf;then echo '* soft nofile 64000' >> /etc/security/limits.conf;fi
+if ! grep "^\*\ hard\ nofile\ 65000" /etc/security/limits.conf;then echo '* hard nofile 65000' >> /etc/security/limits.conf;fi
+# nginx level limits for open files
+if ! grep "^worker_rlimit_nofile" /etc/nginx/nginx.conf;then sed -i '/worker_processes/a worker_rlimit_nofile 64000;' /etc/nginx/nginx.conf;fi
+# php level limits for open files
+if ! grep "^rlimit_files" /etc/php/7.2/fpm/php-fpm.conf;then sed -i '/daemonize/a rlimit_files = 64000' /etc/php/7.2/fpm/php-fpm.conf;fi
+
+systemctl enable --now nginx
+service php7.2-fpm restart
 
 wget -q https://raw.githubusercontent.com/ron7/provisioning/master/createDomainUser.sh -O /usr/local/bin/createDomainUser
 wget -q https://raw.githubusercontent.com/ron7/provisioning/master/createMysqlUserforDB.sh -O /usr/local/bin/createMysqlUserforDB

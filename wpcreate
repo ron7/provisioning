@@ -1,6 +1,0 @@
-   43  wp cli update
-   48  createMysqlUserforDB digitalcopy
-   45  su -s /bin/bash -c "wp core" digitalcopy
-   46  su -s /bin/bash -c "wp core download" digitalcopy
-   56  su -s /bin/bash -c "wp config create --dbname=digitalcopy --dbuser=digitalcopy --dbpass=s62vY1W9PwOF88MMKwpj" digitalcopy
-   58  su -s /bin/bash -c "wp core install --url=http://test.digitalcopy.pro --title='Digital Copy Test' --admin_user=admin --admin_password=123456 --admin_email=evgeni.petrov@gmail.com --skip-email" digitalcopy
