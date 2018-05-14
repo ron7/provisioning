@@ -4,7 +4,7 @@ apt update
 apt upgrade
 
 # install some utilities
-apt install curl build-essential
+apt install curl build-essential libssl-dev
 
 # install php${PHP_VERSION} fpm
 apt install -y \
@@ -25,3 +25,8 @@ php${PHP_VERSION}-xmlrpc \
 php${PHP_VERSION}-zip
 
 apt install mariadb-server mariadb-client
+
+apt install varnish
+
+add-apt-repository ppa:certbot/certbot
+apt install python-certbot-nginx

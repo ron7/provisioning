@@ -18,14 +18,14 @@ bash <(curl -f -L -sS https://ngxpagespeed.com/install)  --nginx-version latest 
 --http-log-path=/var/log/nginx/access.log \
 --with-http_v2_module \
 --with-http_gzip_static_module \
-#--with-http_ssl_module \
-#--with-openssl=~/openssl
+--with-http_ssl_module \
+--with-openssl=/root/openssl
 '
 
 # create sites-enabled/available skeleton
 mkdir /etc/nginx/sites-available
 mkdir /etc/nginx/sites-enabled
-if [ ! grep sites-enabled /etc/nginx/nginx.conf ]; then
+if [[ ! $(grep sites-enabled /etc/nginx/nginx.conf) ]]; then
     line=$((`grep -n "}" /etc/nginx/nginx.conf|tail -n1|cut -d ":" -f1`-1));sed -i "${line}i\    include /etc/nginx/sites-enabled/*.*;" /etc/nginx/nginx.conf;
 fi
 
