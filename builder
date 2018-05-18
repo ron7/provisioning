@@ -7,6 +7,11 @@ bash <(curl -f -L -sS https://ngxpagespeed.com/install)  --nginx-version latest 
 
 if ! grep sites-enabled /etc/nginx/nginx.conf;then line=$((`grep -n "}" /etc/nginx/nginx.conf|tail -n1|cut -d ":" -f1`-1));sed -i "${line}i\ include /etc/nginx/sites-enabled/*;" /etc/nginx/nginx.conf;fi
 
+# get maximum capability of system for open files
+maax=$(cat /proc/sys/fs/file-max)
+# use a third of it
+maxopen=$(($maax/3))
+
 cat > /lib/systemd/system/nginx.service <<ENDD
 [Unit]
 Description=The NGINX HTTP and reverse proxy server
@@ -20,7 +25,7 @@ ExecStart=/usr/sbin/nginx
 ExecReload=/usr/sbin/nginx -s reload
 ExecStop=/bin/kill -s QUIT $MAINPID
 PrivateTmp=true
-LimitNOFILE=65536
+LimitNOFILE=$maxopen
 
 [Install]
 WantedBy=multi-user.target
@@ -31,13 +36,27 @@ ENDD
 apt install -y php7.2-cli php7.2-common php7.2-curl php7.2-fpm php7.2-gd php7.2-intl php7.2-json php7.2-ldap php7.2-mbstring php7.2-mysql php7.2-opcache php7.2-readline php7.2-sqlite3 php7.2-xml php7.2-xmlrpc php7.2-zip mariadb-server
 
 # user level limits for open files
-if ! grep "^\*\ soft\ nofile\ 64000" /etc/security/limits.conf;then echo '* soft nofile 64000' >> /etc/security/limits.conf;fi
-if ! grep "^\*\ hard\ nofile\ 65000" /etc/security/limits.conf;then echo '* hard nofile 65000' >> /etc/security/limits.conf;fi
+if ! grep "^\*\ soft\ noproc\ $maxopen" /etc/security/limits.conf;then echo "* soft noproc $maxopen" >> /etc/security/limits.conf;fi
+if ! grep "^\*\ hard\ noproc\ $maxopen" /etc/security/limits.conf;then echo "* hard noproc $maxopen" >> /etc/security/limits.conf;fi
+if ! grep "^\*\ soft\ nofile\ $maxopen" /etc/security/limits.conf;then echo "* soft nofile $maxopen" >> /etc/security/limits.conf;fi
+if ! grep "^\*\ hard\ nofile\ $maxopen" /etc/security/limits.conf;then echo "* hard nofile $maxopen" >> /etc/security/limits.conf;fi
+if ! grep "^root\ soft\ noproc\ $maxopen" /etc/security/limits.conf;then echo "root soft noproc $maxopen" >> /etc/security/limits.conf;fi
+if ! grep "^root\ hard\ noproc\ $maxopen" /etc/security/limits.conf;then echo "root hard noproc $maxopen" >> /etc/security/limits.conf;fi
+if ! grep "^root\ soft\ nofile\ $maxopen" /etc/security/limits.conf;then echo "root soft nofile $maxopen" >> /etc/security/limits.conf;fi
+if ! grep "^root\ hard\ nofile\ $maxopen" /etc/security/limits.conf;then echo "root hard nofile $maxopen" >> /etc/security/limits.conf;fi
+
+# add limit to sysctl (this overwrites /proc/sys/fs/file-max value, so not using it for now..)
+#if ! grep "^fs.file-max" /etc/sysctl.conf;then echo "fs.file-max = $maxopen" >> /etc/sysctl.conf;sysctl -p;fi
+
+if ! grep -E "^session required\s+pam_limits.so" /etc/pam.d/common-session;then echo "session required pam_limits.so" >> /etc/pam.d/common-session;fi
+if ! grep -E "^session required\s+pam_limits.so" /etc/pam.d/common-session-noninteractive;then echo "session required pam_limits.so" >> /etc/pam.d/common-session-noninteractive;fi
+
 # php level limits for open files
-if ! grep "^rlimit_files" /etc/php/7.2/fpm/php-fpm.conf;then sed -i '/daemonize/a rlimit_files = 64000' /etc/php/7.2/fpm/php-fpm.conf;fi
+if ! grep "^rlimit_files" /etc/php/7.2/fpm/php-fpm.conf;then sed -i "/daemonize/a rlimit_files = $maxopen" /etc/php/7.2/fpm/php-fpm.conf;fi
 
 # nginx level limits for open files
-if ! grep -E "^(\s+)?worker_rlimit_nofile" /etc/nginx/nginx.conf;then sed -i '/worker_processes/a worker_rlimit_nofile 64000;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?worker_rlimit_nofile" /etc/nginx/nginx.conf;then sed -i "/worker_processes/a worker_rlimit_nofile $maxopen;" /etc/nginx/nginx.conf;fi
+sed -iE "s/worker_connections.*/worker_connections $maxopen;/" /etc/nginx/nginx.conf
 
 #some more nginx global vars
 if ! grep -E "^(\s+)?gzip_disable" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_disable     "msie6";' /etc/nginx/nginx.conf;fi
