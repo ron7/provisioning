@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 PHP_VER=7.2
 
-if ! nginx -v;then echo -e "\n::: nginx missing, aborting\n\n";exit 1;fi
-if ! php-fpm${PHP_VER} -v;then echo -e "\n::: php missing, aborting\n\n";exit 1;fi
+if ! nginx -v 2>/dev/null;then echo -e "\n::: nginx missing, aborting\n\n";exit 1;fi
+if ! php-fpm${PHP_VER} -v 1>/dev/null;then echo -e "\n::: php missing, aborting\n\n";exit 1;fi
 
 if [ "$1" != "" ]; then
   echo Domain is: $1
@@ -179,6 +179,100 @@ server {
   }
 
 ENDD
+
+
+if [ $varnish == 1 ];then
+
+if [[ `varnishd -V` ]];then
+
+cat > /etc/varnish/default.vcl <<ENDD
+vcl 4.0;
+backend default {
+        .host = "localhost";
+        .port = "8080";
+}
+#Allow cache-purging requests only from localhost using the acl directive:
+acl purger {
+        "localhost";
+#"203.0.113.100";
+}
+
+sub vcl_recv {
+#Redirect HTTP requests to HTTPS for our SSL website:
+#       if (client.ip != "127.0.0.1" && req.http.host ~ "test.digitalcopy.pro") { set req.http.x-redir = "https://test.digitalcopy.pro" + req.url; return(synth(850, "")); }
+
+        if (req.method == "PURGE") {
+                if (!client.ip ~ purger) {
+                        return(synth(405, "This IP is not allowed to send PURGE requests."));
+                }
+                return (purge);
+        }
+
+        if (req.restarts == 0) {
+                if (req.http.X-Forwarded-For) {
+                        set req.http.X-Forwarded-For = client.ip;
+                }
+        }
+#Exclude POST requests or those with basic authentication from caching:
+        if (req.http.Authorization || req.method == "POST") {
+                return (pass);
+        }
+#Exclude RSS feeds from caching:
+        if (req.url ~ "/feed") {
+                return (pass);
+        }
+#Tell Varnish not to cache the WordPress admin and login pages:
+        if (req.url ~ "wp-admin|wp-login") {
+                return (pass);
+        }
+#WordPress sets many cookies that are safe to ignore. To remove them, add the following lines:
+        set req.http.cookie = regsuball(req.http.cookie, "wp-settings-\d+=[^;]+(; )?", "");
+        set req.http.cookie = regsuball(req.http.cookie, "wp-settings-time-\d+=[^;]+(; )?", "");
+        if (req.http.cookie == "") {
+                unset req.http.cookie;
+        }
+
+}
+
+#Redirect HTTP to HTTPS using the sub vcl_synth directive with the following settings:
+sub vcl_synth {
+        if (resp.status == 850) {
+                set resp.http.Location = req.http.x-redir;
+                set resp.status = 302;
+                return (deliver);
+        }
+}
+#Cache-purging for a particular page must occur each time we make edits to that page
+sub vcl_purge {
+        set req.method = "GET";
+        set req.http.X-Purger = "Purged";
+        return (restart);
+}
+
+#The sub vcl_backend_response directive is used to handle communication with the backend server, NGINX. We use it to set the amount of time the content remains in the cache. We can also set a grace period, which determines how Varnish will serve content from the cache even if the backend server is down. Time can be set in seconds (s), minutes (m), hours (h) or days (d). Here, we've set the caching time to 24 hours, and the grace period to 1 hour, but you can adjust these settings based on your needs:
+sub vcl_backend_response {
+        set beresp.ttl = 24h;
+        set beresp.grace = 1h;
+#allow cookies to be set only if you are on admin pages or WooCommerce-specific pages:
+        if (bereq.url !~ "wp-admin|wp-login|product|cart|checkout|my-account|/?remove_item=") {
+                unset beresp.http.set-cookie;
+        }
+}
+#Change the headers for purge requests by adding the sub vcl_deliver directive:
+sub vcl_deliver {
+        if (req.http.X-Purger) {
+                set resp.http.X-Purger = req.http.X-Purger;
+        }
+}
+
+ENDD
+
+else
+echo -e "\n::: Varnish NOT installed\n"
+fi
+
+fi
+
 echo Creating Nginx links...
 cd /etc/nginx/sites-enabled/
 ln -s ../sites-available/$1.conf $1.conf
