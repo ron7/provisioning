@@ -181,7 +181,7 @@ server {
 ENDD
 
 
-if [ $varnish == 1 ];then
+if [[ $varnish -eq 1 ]];then
 
 if [[ `varnishd -V` ]];then
 
