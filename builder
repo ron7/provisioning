@@ -49,6 +49,7 @@ if ! grep "^root\ hard\ nofile\ $maxopen" /etc/security/limits.conf;then echo "r
 
 # add limit to sysctl (this overwrites /proc/sys/fs/file-max value, so not using it for now..)
 #if ! grep "^fs.file-max" /etc/sysctl.conf;then echo "fs.file-max = $maxopen" >> /etc/sysctl.conf;sysctl -p;fi
+if ! grep "^net.core.somaxconn" /etc/sysctl.conf;then echo "net.core.somaxconn = $maxopen" >> /etc/sysctl.conf;sysctl -p;fi
 
 if ! grep -E "^session required\s+pam_limits.so" /etc/pam.d/common-session;then echo "session required pam_limits.so" >> /etc/pam.d/common-session;fi
 if ! grep -E "^session required\s+pam_limits.so" /etc/pam.d/common-session-noninteractive;then echo "session required pam_limits.so" >> /etc/pam.d/common-session-noninteractive;fi

@@ -284,6 +284,7 @@ cat > /etc/php/${PHP_VER}/fpm/pool.d/$2.conf <<ENDD
 listen.owner = $2
 listen.group = $2
 listen.mode = 0666
+listen.backlog = 65535
 listen = /var/run/php-fpm_$2.sock
 user = $2
 group = $2
