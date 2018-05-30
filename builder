@@ -106,4 +106,8 @@ wget -q https://raw.githubusercontent.com/ron7/provisioning/master/createMysqlUs
 wget -q https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -O /usr/local/bin/wp
 chmod u+x /usr/local/bin/createDomainUser /usr/local/bin/createMysqlUserforDB /usr/local/bin/wp
 
+#install composer
+cd
+curl -sS https://getcomposer.org/installer -o composer-setup.php && php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+
 rm -rf /root/openssl /root/nginx-* /root/incubator-pagespeed-ngx-latest-stable
