@@ -1,5 +1,6 @@
 #!/bin/bash
 apt update -qq
+apt purge popularity-contest -yqq
 apt install -y curl git
 cd
 git clone https://github.com/openssl/openssl --depth 1
@@ -35,7 +36,7 @@ WantedBy=multi-user.target
 ENDD
 
 
-apt install -y php7.2-cli php7.2-common php7.2-curl php7.2-fpm php7.2-gd php7.2-intl php7.2-json php7.2-ldap php7.2-mbstring php7.2-mysql php7.2-opcache php7.2-readline php7.2-sqlite3 php7.2-xml php7.2-xmlrpc php7.2-zip mariadb-server
+apt install -y php7.2-cli php7.2-common php7.2-curl php7.2-fpm php7.2-gd php7.2-intl php7.2-json php7.2-ldap php7.2-mbstring php7.2-mysql php7.2-opcache php7.2-readline php7.2-sqlite3 php7.2-xml php7.2-xmlrpc php7.2-zip mariadb-server certbot
 
 # user level limits for open files
 if ! grep "^\*\ soft\ noproc\ $maxopen" /etc/security/limits.conf;then echo "* soft noproc $maxopen" >> /etc/security/limits.conf;fi
