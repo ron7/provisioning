@@ -1,4 +1,5 @@
 #!/bin/bash
+export LC_ALL=C
 apt update -qq
 apt purge popularity-contest snapd -yqq
 apt install -y curl git vim
