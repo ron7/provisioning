@@ -1,6 +1,6 @@
 #!/bin/bash
 apt update -qq
-apt purge popularity-contest -yqq
+apt purge popularity-contest snapd -yqq
 apt install -y curl git
 cd
 git clone https://github.com/openssl/openssl --depth 1
