@@ -24,6 +24,7 @@ else
 fi
 echo Pass is: $pass
 echo "INFO: $(date +"%Y%m%d_%H:%m:%S")_$(id -un)|$1|$user|$pass" >> /root/dbusers
+echo "mysql -e \"create database if not exists $1 DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci\"" >> /root/dbusers
 echo "mysql -e \"GRANT ALL PRIVILEGES ON $1.* TO '$user'@'%' identified by '$pass'\"" >> /root/dbusers
 #mysql -e "create database if not exists $1"
 mysql -e "create database if not exists $1 DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci"
