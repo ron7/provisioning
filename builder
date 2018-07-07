@@ -60,6 +60,9 @@ if ! grep -E "^session required\s+pam_limits.so" /etc/pam.d/common-session-nonin
 
 # php level limits for open files
 if ! grep "^rlimit_files" /etc/php/7.2/fpm/php-fpm.conf;then sed -i "/daemonize/a rlimit_files = $maxopen" /etc/php/7.2/fpm/php-fpm.conf;fi
+# while we are on PHP:
+sed -i "s/^upload_max_filesize = 2M/upload_max_filesize = 32M/g" /etc/php/7.2/fpm/php.ini
+sed -i "s/^post_max_size = 8M/post_max_size = 64M/g" /etc/php/7.2/fpm/php.ini
 
 # nginx level limits for open files
 if ! grep -E "^(\s+)?worker_rlimit_nofile" /etc/nginx/nginx.conf;then sed -i "/worker_processes/a worker_rlimit_nofile $maxopen;" /etc/nginx/nginx.conf;fi
