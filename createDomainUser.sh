@@ -11,11 +11,24 @@ if [ "$1" != "" ]; then
   echo Creating user $2:
   groupadd $2
   useradd -s /bin/false -d /home/$2 -m -g $2 $2
-  mkdir -p /home/$2/www;mkdir -p /home/$2/dev;touch /home/$2/www/index.php;touch /home/$2/dev/index.php;chmod 751 /home/$2/www /home/$2/dev;chown -R $2.$2 /home/$2/*
-  echo -e "\nDomain contents should be in /home/$2/www/\n"
+  if [ "$3" != "" ];then
+    webroot=$3
+    chown -R $2.$2 $webroot
+  else
+    webroot=/home/$2/www
+    mkdir -p /home/$2/www
+    mkdir -p /home/$2/dev
+    touch /home/$2/www/index.php
+    touch /home/$2/dev/index.php
+    chmod 751 $webroot /home/$2/dev
+    chown -R $2.$2 /home/$2/*
+  fi
+
+
   id=`id $2 -u`
   mkdir -p /etc/nginx/sites-enabled/;mkdir -p /etc/nginx/sites-available/
   echo Creating NginX config file: /etc/nginx/sites-available/$1.conf
+  echo -e "\nDomain contents should be in $webroot\n"
   cat > /etc/nginx/sites-available/$1.conf <<ENDD
 #limit_req_zone \$binary_remote_addr zone=one:10m rate=20r/m;
 #limit_rate 300K; limit_conn_zone \$binary_remote_addr zone=two:4m;
@@ -29,7 +42,7 @@ server {
 
   listen 80;
   server_name $1;
-  root /home/$2/www;
+  root $webroot;
 
   if (\$rewritetossl = 1) {
     set \$check_ssl_prot "\${ssl_protocol}P";
@@ -78,8 +91,8 @@ server {
     location ~* ^/(?:README|LICENSE[^.]*|LEGALNOTICE)(?:\\.txt)*$ {  return 404;  }
 
     location ~* \\.(ico|jpg|jpeg|png|gif|svg|js|css|swf|eot|ttf|otf|woff|woff2)$ {
-    valid_referers server_names;
-    if (\$invalid_referer)  { return 444; }
+    #valid_referers server_names; # enable these two lines for hotlinking, but test as some resources will stop loading
+    #if (\$invalid_referer)  { return 444; }
       add_header Cache-Control "public";
       add_header Access-Control-Allow-Origin *;
       add_header X-Frame-Options "DENY";
@@ -192,14 +205,14 @@ ENDD
 
 if [[ $varnish -eq 1 ]];then
 
-if [[ `varnishd -V` ]];then
+  if [[ `varnishd -V` ]];then
 
-cat > /etc/varnish/default.vcl <<ENDD
+    cat > /etc/varnish/default.vcl <<ENDD
 vcl 4.0;
 backend default {
         .host = "localhost";
         .port = "8080";
-}
+      }
 #Allow cache-purging requests only from localhost using the acl directive:
 acl purger {
         "localhost";
@@ -213,35 +226,35 @@ sub vcl_recv {
         if (req.method == "PURGE") {
                 if (!client.ip ~ purger) {
                         return(synth(405, "This IP is not allowed to send PURGE requests."));
-                }
+                      }
                 return (purge);
-        }
+              }
 
         if (req.restarts == 0) {
                 if (req.http.X-Forwarded-For) {
                         set req.http.X-Forwarded-For = client.ip;
-                }
-        }
+                      }
+                    }
 #Exclude POST requests or those with basic authentication from caching:
         if (req.http.Authorization || req.method == "POST") {
                 return (pass);
-        }
+              }
 #Exclude RSS feeds from caching:
         if (req.url ~ "/feed") {
                 return (pass);
-        }
+              }
 #Tell Varnish not to cache the WordPress admin and login pages:
         if (req.url ~ "wp-admin|wp-login") {
                 return (pass);
-        }
+              }
 #WordPress sets many cookies that are safe to ignore. To remove them, add the following lines:
         set req.http.cookie = regsuball(req.http.cookie, "wp-settings-\d+=[^;]+(; )?", "");
         set req.http.cookie = regsuball(req.http.cookie, "wp-settings-time-\d+=[^;]+(; )?", "");
         if (req.http.cookie == "") {
                 unset req.http.cookie;
-        }
+              }
 
-}
+            }
 
 #Redirect HTTP to HTTPS using the sub vcl_synth directive with the following settings:
 sub vcl_synth {
@@ -249,14 +262,14 @@ sub vcl_synth {
                 set resp.http.Location = req.http.x-redir;
                 set resp.status = 302;
                 return (deliver);
-        }
-}
+              }
+            }
 #Cache-purging for a particular page must occur each time we make edits to that page
 sub vcl_purge {
         set req.method = "GET";
         set req.http.X-Purger = "Purged";
         return (restart);
-}
+      }
 
 #The sub vcl_backend_response directive is used to handle communication with the backend server, NGINX. We use it to set the amount of time the content remains in the cache. We can also set a grace period, which determines how Varnish will serve content from the cache even if the backend server is down. Time can be set in seconds (s), minutes (m), hours (h) or days (d). Here, we've set the caching time to 24 hours, and the grace period to 1 hour, but you can adjust these settings based on your needs:
 sub vcl_backend_response {
@@ -265,19 +278,19 @@ sub vcl_backend_response {
 #allow cookies to be set only if you are on admin pages or WooCommerce-specific pages:
         if (bereq.url !~ "wp-admin|wp-login|product|cart|checkout|my-account|/?remove_item=") {
                 unset beresp.http.set-cookie;
-        }
-}
+              }
+            }
 #Change the headers for purge requests by adding the sub vcl_deliver directive:
 sub vcl_deliver {
         if (req.http.X-Purger) {
                 set resp.http.X-Purger = req.http.X-Purger;
-        }
-}
+              }
+            }
 
 ENDD
 
 else
-echo -e "\n::: Varnish NOT installed\n"
+  echo -e "\n::: Varnish NOT installed\n"
 fi
 
 fi
