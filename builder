@@ -156,7 +156,7 @@ fi
 # this note should always be at the end so cust can see it:
 echo
 echo
-echo NOTE: you need to visit your server and configure rainloop at http//`hostname -I`?admin user: admin , default pass: 12345, CHANGE THE PASS
+echo NOTE: you need to visit your server and configure rainloop at http//$(hostname -I|sed "s/ //g")?admin user: admin , default pass: 12345, CHANGE THE PASS
 echo
 echo
 
