@@ -118,7 +118,6 @@ curl -sS https://getcomposer.org/installer -o composer-setup.php && php composer
 #enable bash completion
 bcl=$(grep "enable bash completion in interactive shells" /etc/bash.bashrc --line-number|cut -d: -f1)
 for z in `seq $(($bcl+1)) $(($bcl+7))`;do
-echo $z;
 sed -i "${z}s/^#//" /etc/bash.bashrc
 done
 
