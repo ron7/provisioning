@@ -77,14 +77,24 @@ server {
     location ~ /\\. { deny  all; access_log off; log_not_found off; }
     location ~* ^/(?:README|LICENSE[^.]*|LEGALNOTICE)(?:\\.txt)*$ {  return 404;  }
     location ~* ^.+.(jpg|jpeg|gif|png|ico|css|js)$ {
+
+    location ~* \\.(ico|jpg|jpeg|png|gif|svg|js|css|swf|eot|ttf|otf|woff|woff2)$ {
     valid_referers server_names;
     if (\$invalid_referer)  { return 444; }
-      expires    max;
-      access_log off;
-      add_header Cache-Control public;
+      add_header Cache-Control "public";
       add_header Access-Control-Allow-Origin *;
-      break;
+      add_header X-Frame-Options "DENY";
+      expires +1y;
+      try_files \$uri \$uri/ /index.php\$is_args\$args;
     }
+    location ~* \\.(zip|gz|gzip|bz2|csv|xml)$ {
+      add_header Cache-Control "no-store";
+      add_header Access-Control-Allow-Origin *;
+      add_header X-Frame-Options "DENY";
+      expires    off;
+      try_files \$uri \$uri/ /index.php\$is_args\$args;
+    }
+    add_header X-Frame-Options "DENY";
 
     gzip             on;
     gzip_min_length  1000;
