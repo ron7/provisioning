@@ -118,7 +118,7 @@ curl -sS https://getcomposer.org/installer -o composer-setup.php && php composer
 #enable bash completion
 bcl=$(grep "enable bash completion in interactive shells" /etc/bash.bashrc --line-number|cut -d: -f1)
 for z in `seq $(($bcl+1)) $(($bcl+7))`;do
-sed -i "${z}s/^#//" /etc/bash.bashrc
+  sed -i "${z}s/^#//" /etc/bash.bashrc
 done
 
 if ! grep "^export\ HISTCONTROL=" /etc/bash.bashrc;then echo "export HISTCONTROL=ignoredups" >> /etc/bash.bashrc;fi
@@ -126,3 +126,37 @@ if ! grep "^export\ HISTFILESIZE=" /etc/bash.bashrc;then echo "export HISTFILESI
 if ! grep "^export\ HISTSIZE=" /etc/bash.bashrc;then echo "export HISTSIZE=" >> /etc/bash.bashrc;fi
 
 rm -rf /root/openssl /root/nginx-* /root/incubator-pagespeed-ngx-latest-stable
+
+# add /var/www, and put rainloop there as default site
+mkdir -p /var/www && cd /var/www && wget -q https://www.rainloop.net/repository/webmail/rainloop-community-latest.zip -O rainloop-community-latest.zip && unzip -q rainloop-community-latest.zip && rm -rf rainloop-community-latest.zip
+
+# to replace the wildcard catcher, cleanup and modify the nginx.conf
+sed -i "/\s*#/d" /etc/nginx/nginx.conf
+sed -i "/^$/d" /etc/nginx/nginx.conf
+
+# nginx delete from start nds to end nde:
+nds=$(grep "server {" /etc/nginx/nginx.conf --line-number|cut -d: -f1)
+nde=$(($(grep "include\s\+\/etc" /etc/nginx/nginx.conf --line-number|cut -d: -f1) - 1))
+sed -i "${nds},${nde}d" /etc/nginx/nginx.conf
+
+/usr/local/bin/createDomainUser _ www-data /var/www
+if [[ ! `grep "listen 80 default_server" /etc/nginx/sites-available/_.conf` ]];then
+  sed -i '1,/RE/s/listen 80;/listen 80 default_server;/' /etc/nginx/sites-available/_.conf
+fi
+
+if [[ ! `grep "data { deny all; }" /etc/nginx/sites-available/_.conf` ]];then
+  sed -i "/.well-known/i \ \ \ \ location ^~ \/data { deny all; }" /etc/nginx/sites-available/_.conf
+fi
+
+if `nginx -qt`;then
+  nginx -s reload
+fi
+
+
+# this note should always be at the end so cust can see it:
+echo
+echo
+echo NOTE: you need to visit your server and configure rainloop at http//IP?admin user: admin , default pass: 12345, CHANGE THE PASS
+echo
+echo
+
