@@ -76,7 +76,6 @@ server {
     location ~ /.well-known { allow all;}
     location ~ /\\. { deny  all; access_log off; log_not_found off; }
     location ~* ^/(?:README|LICENSE[^.]*|LEGALNOTICE)(?:\\.txt)*$ {  return 404;  }
-    location ~* ^.+.(jpg|jpeg|gif|png|ico|css|js)$ {
 
     location ~* \\.(ico|jpg|jpeg|png|gif|svg|js|css|swf|eot|ttf|otf|woff|woff2)$ {
     valid_referers server_names;
