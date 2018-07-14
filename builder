@@ -109,7 +109,8 @@ service php7.2-fpm restart
 wget -q https://raw.githubusercontent.com/ron7/provisioning/master/createDomainUser.sh -O /usr/local/bin/createDomainUser
 wget -q https://raw.githubusercontent.com/ron7/provisioning/master/createMysqlUserforDB.sh -O /usr/local/bin/createMysqlUserforDB
 wget -q https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -O /usr/local/bin/wp
-chmod u+x /usr/local/bin/createDomainUser /usr/local/bin/createMysqlUserforDB /usr/local/bin/wp
+chmod u+x /usr/local/bin/createDomainUser /usr/local/bin/createMysqlUserforDB
+chmod +x /usr/local/bin/wp
 
 #install composer
 cd
