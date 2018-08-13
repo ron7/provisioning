@@ -111,6 +111,7 @@ wget -q https://raw.githubusercontent.com/ron7/provisioning/master/createMysqlUs
 wget -q https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -O /usr/local/bin/wp
 chmod u+x /usr/local/bin/createDomainUser /usr/local/bin/createMysqlUserforDB
 chmod +x /usr/local/bin/wp
+chmod -x /etc/update-motd.d/*
 
 #install composer
 cd
