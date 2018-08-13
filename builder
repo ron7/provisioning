@@ -153,11 +153,24 @@ if `nginx -qt`;then
   nginx -s reload
 fi
 
+if [ -d /etc/logrotate.d ];then
+  cat > /lib/systemd/system/nginx.service <<ENDD
+/var/log/nginx/*.log {
+    rotate 12
+    weekly
+    compress
+    missingok
+    notifempty
+    #create 644 root root
+  }
+ENDD
+fi
 
+apt update -qq && apt dist-upgrade -yqq && apt autoremove -yqq && dpkg -l|grep ^rc|awk '{print $2}'|xargs apt purge -yqq
 # this note should always be at the end so cust can see it:
 echo
 echo
-echo NOTE: you need to visit your server and configure rainloop at http//$(hostname -I|sed "s/ //g")?admin user: admin , default pass: 12345, CHANGE THE PASS
+echo NOTE: you need to visit your server and configure rainloop at http://$(curl -s ipme.me)/?admin user: admin , default pass: 12345, CHANGE THE PASS
 echo
 echo
 
