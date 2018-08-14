@@ -115,7 +115,7 @@ chmod -x /etc/update-motd.d/*
 
 #install composer
 cd
-curl -sS https://getcomposer.org/installer -o composer-setup.php && php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+curl -sS https://getcomposer.org/installer -o composer-setup.php && php composer-setup.php --install-dir=/usr/local/bin --filename=composer && rm -f composer-setup.php
 
 #enable bash completion
 bcl=$(grep "enable bash completion in interactive shells" /etc/bash.bashrc --line-number|cut -d: -f1)
