@@ -155,7 +155,7 @@ if `nginx -qt`;then
 fi
 
 if [ -d /etc/logrotate.d ];then
-  cat > /lib/systemd/system/nginx.service <<ENDD
+  cat > /etc/logrotate.d/nginx <<ENDD
 /var/log/nginx/*.log {
     rotate 12
     weekly
