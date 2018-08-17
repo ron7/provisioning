@@ -48,10 +48,10 @@ server {
     set \$check_ssl_prot "\${ssl_protocol}P";
   }
 
-#  ## SSL: forcing SSL:
-#      if (\$check_ssl_prot = P) {
-#         rewrite ^   https://\$server_name\$request_uri permanent;
-#      }
+ ## SSL: forcing SSL:
+  if (\$check_ssl_prot = P) {
+    rewrite ^   https://\$server_name\$request_uri permanent;
+  }
 
 ##  if (\$enablessl = 1) {
 #    listen 443 ssl http2;
@@ -171,6 +171,7 @@ server {
   index index.php index.html;
 
   location = /robots.txt { access_log off; log_not_found off; }
+  location ~ /.well-known { allow all;}
   location ~ /\\. { deny  all; access_log off; log_not_found off; }
   location ~* ^/(?:README|LICENSE[^.]*|LEGALNOTICE)(?:\\.txt)*$ {  return 404;  }
   location ~* ^.+.(jpg|jpeg|gif|png|ico|css|js)$ {
