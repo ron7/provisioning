@@ -1,0 +1,34 @@
+#!/bin/bash
+if ! certbot --version 2>/dev/null;then echo -e "\n::: certbot missing\n";apt install certbot;fi
+
+if [[ $2 == "" ]];then
+  echo :: Usage: $0 domain.com username \[webroot\]
+else
+  cd=`pwd`
+  if [[ $3 != "" ]];then
+    wr=$3
+  else
+    wr="/home/$2/www/"
+  fi
+
+  firstdomain=`echo $1|cut -d, -f1`
+  san=`echo $1|sed "s/,/ -d /g"`
+  certbot certonly --agree-tos --expand -d $1 --cert-path /home/$2/$firstdomain.crt --fullchain-path /home/$2/$firstdomain.pem --chain-path /home/$2/$firstdomain.crt.ca --webroot --email ron@xron.net -w $wr --cert-name $firstdomain --reinstall --rsa-key-size 4096 -nq
+  if [ $? == "0" ];then
+    echo :: done issuing SSL
+    if [[ "`openssl x509 -noout -modulus -in /etc/letsencrypt/live/$firstdomain/cert.pem| openssl md5|awk '{print $2}'`" == "`openssl rsa -noout -modulus -in /etc/letsencrypt/live/$firstdomain/privkey.pem| openssl md5|awk '{print $2}'`" ]];then
+      echo md5 matches
+      ln -s /etc/letsencrypt/live/$firstdomain/cert.pem /home/$2/$firstdomain.crt
+      ln -s /etc/letsencrypt/live/$firstdomain/chain.pem /home/$2/$firstdomain.ca
+      ln -s /etc/letsencrypt/live/$firstdomain/fullchain.pem /home/$2/$firstdomain.pem
+      ln -s /etc/letsencrypt/live/$firstdomain/privkey.pem /home/$2/$firstdomain.key
+      if `nginx -qt`;then
+        nginx -s reload
+      fi
+    else
+      echo md5 did not match, so not updating /home/$2/ , please check /etc/letsencrypt/live/$firstdomain/
+    fi
+  fi
+  #cp -p $1.key /home/$2/
+  cd `cd`
+fi

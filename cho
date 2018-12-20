@@ -1,0 +1,4 @@
+#!/bin/bash
+chouser=$(stat -c %U $1)
+echo ::: chown -R $chouser:$chouser .
+chown -R $chouser:$chouser .

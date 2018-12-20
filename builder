@@ -106,10 +106,11 @@ if ! grep -E "^(\s+)?proxy_buffers" /etc/nginx/nginx.conf;then sed -iE '/http\s\
 systemctl enable --now nginx
 service php7.2-fpm restart
 
-wget -q https://raw.githubusercontent.com/ron7/provisioning/master/createDomainUser.sh -O /usr/local/bin/createDomainUser
-wget -q https://raw.githubusercontent.com/ron7/provisioning/master/createMysqlUserforDB.sh -O /usr/local/bin/createMysqlUserforDB
+for z in web_nginx db cho certbot_me; do
+  wget -q https://raw.githubusercontent.com/ron7/provisioning/master/$z -O /usr/local/bin/$z
+  chmod u+x /usr/local/bin/$z
+done
 wget -q https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -O /usr/local/bin/wp
-chmod u+x /usr/local/bin/createDomainUser /usr/local/bin/createMysqlUserforDB
 chmod +x /usr/local/bin/wp
 chmod -x /etc/update-motd.d/*
 
@@ -141,7 +142,7 @@ nds=$(grep "server {" /etc/nginx/nginx.conf --line-number|cut -d: -f1)
 nde=$(($(grep "include\s\+\/etc" /etc/nginx/nginx.conf --line-number|cut -d: -f1) - 1))
 sed -i "${nds},${nde}d" /etc/nginx/nginx.conf
 
-/usr/local/bin/createDomainUser _ www-data /var/www
+/usr/local/bin/web_nginx _ www-data /var/www
 if [[ ! `grep "listen 80 default_server" /etc/nginx/sites-available/_.conf` ]];then
   sed -i '1,/RE/s/listen 80;/listen 80 default_server;/' /etc/nginx/sites-available/_.conf
 fi
@@ -174,8 +175,6 @@ echo LANG=C.UTF-8 > /etc/default/locale
 apt update -qq && apt dist-upgrade -yqq && apt autoremove -yqq && dpkg -l|grep ^rc|awk '{print $2}'|xargs apt purge -yqq
 # this note should always be at the end so cust can see it:
 echo
-echo
 echo NOTE: you need to visit your server and configure rainloop at http://$(curl -s ipme.me)/?admin user: admin , default pass: 12345, CHANGE THE PASS
-echo
 echo
 

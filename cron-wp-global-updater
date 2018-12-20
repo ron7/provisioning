@@ -1,0 +1,18 @@
+#!/bin/bash
+if [ "$1" == 'q' ];then
+  q='--quiet'
+else
+  q=''
+fi
+wp cli update --yes $q
+locate wp-config.php|while read z
+do
+  folder=`dirname $z`
+  user=` stat --printf="%U" $z`
+  echo ::::::: Folder: $folder with user: $user
+  cd $folder
+  su -s /bin/bash -c "wp core update $q" $user
+  su -s /bin/bash -c "wp plugin update --all $q" $user
+  su -s /bin/bash -c "wp theme update --all $q" $user
+
+done

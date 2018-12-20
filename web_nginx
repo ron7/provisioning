@@ -1,15 +1,49 @@
 #!/usr/bin/env bash
-PHP_VER=7.2
+# options:
+quiet=1
+
+# env:
+PHP_VER=$(dpkg -l|grep php|grep fpm|awk '{print $2}'|sort -n|tail -1|sed "s/php//; s/-fpm//")
+if [ -z $PHP_VER ];then
+  PHP_VER=7.2
+fi
 
 if ! nginx -v 2>/dev/null;then echo -e "\n::: nginx missing, aborting\n\n";exit 1;fi
 if ! php-fpm${PHP_VER} -v 1>/dev/null;then echo -e "\n::: php missing, aborting\n\n";exit 1;fi
 
-if [ "$1" != "" ]; then
-  echo Domain is: $1
-  echo User is: $2
+function servicesReload {
+  if [ "$1" != "-q" ]; then
+    echo :: Reloading services:
+    echo "   - service nginx reload"
+    echo "   - service php${PHP_VER}-fpm reload"
+  fi
+  service nginx reload
+  service php${PHP_VER}-fpm reload
+}
+function logger {
+  if [ "$quiet" == "1" ] ;then
+    echo -n ''
+  else
+    echo -e "$1"
+  fi
+}
+if [ "$1" == "-d" ]; then
+  if [ "$3" != "" ] ; then
+    user=$3
+    logger "Disabling domain symlink in Nginx: $2"
+    rm -rf /etc/nginx/sites-enabled/$2.conf
+    logger "Removing from PHP pool"
+    rm -rf /etc/php/${PHP_VER}/fpm/pool.d/$user.conf
+    servicesReload -q
+    logger "Deleting user [and group]: $user"
+    userdel -f $user 2>/dev/null
+    echo ":: home folder can be purged via: rm -rf /home/$user"
+  else
+    echo Usage: $0 -d domain.com user
+  fi
+elif [ -n "$2" ]; then
   currentpath=`pwd`
-  echo Creating user $2:
-  groupadd $2
+  groupadd -f $2
   useradd -s /bin/false -d /home/$2 -m -g $2 $2
   if [ "$3" != "" ];then
     webroot=$3
@@ -27,8 +61,8 @@ if [ "$1" != "" ]; then
 
   id=`id $2 -u`
   mkdir -p /etc/nginx/sites-enabled/;mkdir -p /etc/nginx/sites-available/
-  echo Creating NginX config file: /etc/nginx/sites-available/$1.conf
-  echo -e "\nDomain contents should be in $webroot\n"
+  logger "Creating Nginx config file: /etc/nginx/sites-available/$1.conf"
+  echo webroot: $webroot
   cat > /etc/nginx/sites-available/$1.conf <<ENDD
 #limit_req_zone \$binary_remote_addr zone=one:10m rate=20r/m;
 #limit_rate 300K; limit_conn_zone \$binary_remote_addr zone=two:4m;
@@ -48,10 +82,10 @@ server {
     set \$check_ssl_prot "\${ssl_protocol}P";
   }
 
-## SSL: forcing SSL:
-#  if (\$check_ssl_prot = P) {
-#    rewrite ^   https://\$server_name\$request_uri permanent;
-#  }
+#  ## SSL: forcing SSL:
+#      if (\$check_ssl_prot = P) {
+#         rewrite ^   https://\$server_name\$request_uri permanent;
+#      }
 
 ##  if (\$enablessl = 1) {
 #    listen 443 ssl http2;
@@ -171,7 +205,6 @@ server {
   index index.php index.html;
 
   location = /robots.txt { access_log off; log_not_found off; }
-  location ~ /.well-known { allow all;}
   location ~ /\\. { deny  all; access_log off; log_not_found off; }
   location ~* ^/(?:README|LICENSE[^.]*|LEGALNOTICE)(?:\\.txt)*$ {  return 404;  }
   location ~* ^.+.(jpg|jpeg|gif|png|ico|css|js)$ {
@@ -291,16 +324,16 @@ sub vcl_deliver {
 ENDD
 
 else
-  echo -e "\n::: Varnish NOT installed\n"
+  logger "\n::: Varnish NOT installed\n"
 fi
 
 fi
 
-echo Creating Nginx links...
+logger "Creating Nginx links"
 cd /etc/nginx/sites-enabled/
-ln -s ../sites-available/$1.conf $1.conf
+ln -fs ../sites-available/$1.conf $1.conf
 cd $currentpath
-echo Adding pool to php-fpm...
+logger "Adding pool to php-fpm"
 mkdir -p /etc/php/${PHP_VER}/fpm/pool.d/
 cat > /etc/php/${PHP_VER}/fpm/pool.d/$2.conf <<ENDD
 [$2]
@@ -321,13 +354,8 @@ php_admin_value[cgi.fix_pathinfo] = 0;
 ENDD
 if  [[ -z `grep "SCRIPT_FILENAME" /etc/nginx/fastcgi_params`  ]];then sed -i '/SCRIPT_NAME/i fastcgi_param  SCRIPT_FILENAME    \$document_root\$fastcgi_script_name;' /etc/nginx/fastcgi_params ;fi
 
-echo Reloading services:
-service nginx reload
-service php${PHP_VER}-fpm reload
+servicesReload -q
 
 else
-  echo Usage: $0 domain.com username
-  echo Example: $0 xron.net xron
-  echo All 2 parameters must be present !
+  echo Usage: $0 domain.com username [webroot]
 fi
-
