@@ -81,7 +81,7 @@ if ! grep -E "^(\s+)?gzip_http_version" /etc/nginx/nginx.conf;then sed -iE '/htt
 if ! grep -E "^(\s+)?gzip_comp_level" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_comp_level 4;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?gzip_buffers" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_buffers 16 8k;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?gzip_static" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_static on;' /etc/nginx/nginx.conf;fi
-if ! grep -E "^(\s+)?gzip\s\+on" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip on;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?gzip\s\+?on" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip on;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?tcp_nopush" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a tcp_nopush on;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?tcp_nodelay" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a tcp_nodelay on;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?server_tokens" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a server_tokens off;' /etc/nginx/nginx.conf;fi
