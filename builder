@@ -75,7 +75,7 @@ sed -iE "s/worker_connections.*/worker_connections $maxopen;/" /etc/nginx/nginx.
 if ! grep -E "^(\s+)?gzip_proxied" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_proxied expired no-cache no-store private auth;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?gzip_disable" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_disable "msie6";' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?gzip_vary" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_vary on;' /etc/nginx/nginx.conf;fi
-if ! grep -E "^(\s+)?gzip_types" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_types text/plain text/html text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript text/x-js image/x-icon image/bmp;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?gzip_types" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript text/x-js image/x-icon image/bmp;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?gzip_min_length" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_min_length 8;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?gzip_http_version" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_http_version 1.0;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?gzip_comp_level" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_comp_level 4;' /etc/nginx/nginx.conf;fi
