@@ -1,4 +1,7 @@
 #!/bin/bash
+
+PHP_VER="7.2"
+
 export LC_ALL=C
 apt update -qq
 apt purge popularity-contest snapd -yqq
@@ -37,7 +40,7 @@ WantedBy=multi-user.target
 ENDD
 
 
-apt install -y php7.2-cli php7.2-common php7.2-curl php7.2-fpm php7.2-gd php7.2-intl php7.2-json php7.2-ldap php7.2-mbstring php7.2-mysql php7.2-opcache php7.2-readline php7.2-sqlite3 php7.2-xml php7.2-xmlrpc php7.2-zip mariadb-server certbot bash-completion
+apt install -y php${PHP_VER}-cli php${PHP_VER}-common php${PHP_VER}-curl php${PHP_VER}-fpm php${PHP_VER}-gd php${PHP_VER}-intl php${PHP_VER}-json php${PHP_VER}-ldap php${PHP_VER}-mbstring php${PHP_VER}-mysql php${PHP_VER}-opcache php${PHP_VER}-readline php${PHP_VER}-sqlite3 php${PHP_VER}-xml php${PHP_VER}-xmlrpc php${PHP_VER}-zip mariadb-server certbot bash-completion
 
 # user level limits for open files
 if ! grep "^\*\ soft\ noproc\ $maxopen" /etc/security/limits.conf;then echo "* soft noproc $maxopen" >> /etc/security/limits.conf;fi
@@ -59,32 +62,33 @@ if ! grep -E "^session required\s+pam_limits.so" /etc/pam.d/common-session;then 
 if ! grep -E "^session required\s+pam_limits.so" /etc/pam.d/common-session-noninteractive;then echo "session required pam_limits.so" >> /etc/pam.d/common-session-noninteractive;fi
 
 # php level limits for open files
-if ! grep "^rlimit_files" /etc/php/7.2/fpm/php-fpm.conf;then sed -i "/daemonize/a rlimit_files = $maxopen" /etc/php/7.2/fpm/php-fpm.conf;fi
+if ! grep "^rlimit_files" /etc/php/${PHP_VER}/fpm/php-fpm.conf;then sed -i "/daemonize/a rlimit_files = $maxopen" /etc/php/${PHP_VER}/fpm/php-fpm.conf;fi
 # while we are on PHP:
-sed -i "s/^upload_max_filesize = 2M/upload_max_filesize = 32M/g" /etc/php/7.2/fpm/php.ini
-sed -i "s/^post_max_size = 8M/post_max_size = 64M/g" /etc/php/7.2/fpm/php.ini
+sed -i "s/^upload_max_filesize = 2M/upload_max_filesize = 32M/g" /etc/php/${PHP_VER}/fpm/php.ini
+sed -i "s/^post_max_size = 8M/post_max_size = 64M/g" /etc/php/${PHP_VER}/fpm/php.ini
 
 # nginx level limits for open files
 if ! grep -E "^(\s+)?worker_rlimit_nofile" /etc/nginx/nginx.conf;then sed -i "/worker_processes/a worker_rlimit_nofile $maxopen;" /etc/nginx/nginx.conf;fi
 sed -iE "s/worker_connections.*/worker_connections $maxopen;/" /etc/nginx/nginx.conf
 
 #some more nginx global vars
-if ! grep -E "^(\s+)?gzip_disable" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_disable     "msie6";' /etc/nginx/nginx.conf;fi
-if ! grep -E "^(\s+)?gzip_vary" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_vary         on;' /etc/nginx/nginx.conf;fi
-if ! grep -E "^(\s+)?gzip_types" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_types        text/plain text/css image/x-icon image/bmp;' /etc/nginx/nginx.conf;fi
-if ! grep -E "^(\s+)?gzip_min_length" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_min_length   8;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?gzip_proxied" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_proxied expired no-cache no-store private auth;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?gzip_disable" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_disable "msie6";' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?gzip_vary" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_vary on;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?gzip_types" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_types text/plain text/html text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript text/x-js image/x-icon image/bmp;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?gzip_min_length" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_min_length 8;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?gzip_http_version" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_http_version 1.0;' /etc/nginx/nginx.conf;fi
-if ! grep -E "^(\s+)?gzip_comp_level" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_comp_level   4;' /etc/nginx/nginx.conf;fi
-if ! grep -E "^(\s+)?gzip_buffers" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_buffers      16 8k;' /etc/nginx/nginx.conf;fi
-if ! grep -E "^(\s+)?gzip_static" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_static       on;' /etc/nginx/nginx.conf;fi
-if ! grep -E "^(\s+)?gzip" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip              on;' /etc/nginx/nginx.conf;fi
-if ! grep -E "^(\s+)?tcp_nopush" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a tcp_nopush  on;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?gzip_comp_level" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_comp_level 4;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?gzip_buffers" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_buffers 16 8k;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?gzip_static" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip_static on;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?gzip\s\+on" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a gzip on;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?tcp_nopush" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a tcp_nopush on;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?tcp_nodelay" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a tcp_nodelay on;' /etc/nginx/nginx.conf;fi
-if ! grep -E "^(\s+)?server_tokens" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a server_tokens           off;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?server_tokens" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a server_tokens off;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?server_name_in_redirect" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a server_name_in_redirect off;' /etc/nginx/nginx.conf;fi
-if ! grep -E "^(\s+)?sendfile" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a sendfile                 on;' /etc/nginx/nginx.conf;fi
-if ! grep -E "^(\s+)?recursive_error_pages" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a recursive_error_pages    on;' /etc/nginx/nginx.conf;fi
-if ! grep -E "^(\s+)?ignore_invalid_headers" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a ignore_invalid_headers   on;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?sendfile" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a sendfile on;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?recursive_error_pages" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a recursive_error_pages on;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?ignore_invalid_headers" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a ignore_invalid_headers on;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?fastcgi_read_timeout" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a fastcgi_read_timeout 1200s;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?fastcgi_send_timeout" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a fastcgi_send_timeout 1200s;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?proxy_read_timeout" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a proxy_read_timeout 1200s;' /etc/nginx/nginx.conf;fi
@@ -94,17 +98,17 @@ if ! grep -E "^(\s+)?fastcgi_buffer_size" /etc/nginx/nginx.conf;then sed -iE '/h
 if ! grep -E "^(\s+)?fastcgi_buffers" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a fastcgi_buffers 8 128k;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?client_body_timeout" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a client_body_timeout 3000;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?client_header_timeout" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a client_header_timeout 3000;' /etc/nginx/nginx.conf;fi
-if ! grep -E "^(\s+)?send_timeout" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a send_timeout          5;' /etc/nginx/nginx.conf;fi
-if ! grep -E "^(\s+)?keepalive_timeout" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a keepalive_timeout     5 5;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?send_timeout" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a send_timeout 5;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?keepalive_timeout" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a keepalive_timeout 5 5;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?large_client_header_buffers" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a large_client_header_buffers 1 1k;' /etc/nginx/nginx.conf;fi
-if ! grep -E "^(\s+)?client_max_body_size" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a client_max_body_size      128M;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?client_max_body_size" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a client_max_body_size 128M;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?client_header_buffer_size" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a client_header_buffer_size 32M;' /etc/nginx/nginx.conf;fi
-if ! grep -E "^(\s+)?client_body_buffer_size" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a client_body_buffer_size   32k;' /etc/nginx/nginx.conf;fi
+if ! grep -E "^(\s+)?client_body_buffer_size" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a client_body_buffer_size 32k;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?proxy_buffer_size" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a proxy_buffer_size 32k;' /etc/nginx/nginx.conf;fi
 if ! grep -E "^(\s+)?proxy_buffers" /etc/nginx/nginx.conf;then sed -iE '/http\s\+{/a proxy_buffers 8 16k;' /etc/nginx/nginx.conf;fi
 
 systemctl enable --now nginx
-service php7.2-fpm restart
+service php${PHP_VER}-fpm restart
 
 for z in web_nginx db cho certbot_me; do
   wget -q https://raw.githubusercontent.com/ron7/provisioning/master/$z -O /usr/local/bin/$z
@@ -132,6 +136,28 @@ rm -rf /root/openssl /root/nginx-* /root/incubator-pagespeed-ngx-latest-stable
 
 # add /var/www, and put rainloop there as default site
 mkdir -p /var/www && cd /var/www && wget -q https://www.rainloop.net/repository/webmail/rainloop-community-latest.zip -O rainloop-community-latest.zip && unzip -q rainloop-community-latest.zip && rm -rf rainloop-community-latest.zip
+
+echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>404</title><style> html, body {margin:0;padding:0;width:100%;height:100%;} @keyframes bob {0% {top:0;} 50% {top:0.2em;} } body {background:#53bfe0;vertical-align:middle;text-align:center;transform:translate3d(0, 0, 0);} body:before {content:"";display:inline-block;height:100%;vertical-align:middle;margin-right:-0.25em;} .scene {display:inline-block;vertical-align:middle;} .text {color:white;font-size:2em;font-family:helvetica;font-weight:bold;} .sheep {display:inline-block;position:relative;font-size:1em;} .sheep * {transition:transform 0.3s;} .sheep .top {position:relative;top:0;animation:bob 1s infinite;} .sheep:hover .head {transform:rotate(0deg);} .sheep:hover .head .eye {width:1.25em;height:1.25em;} .sheep:hover .head .eye:before {right:30%;} .sheep:hover .top {animation-play-state:paused;} .sheep .head {display:inline-block;width:5em;height:5em;border-radius:100%;background:#211e21;vertical-align:middle;position:relative;top:1em;transform:rotate(30deg);} .sheep .head:before {content:"";display:inline-block;width:80%;height:50%;background:#211e21;position:absolute;bottom:0;right:-10%;border-radius:50% 40%;} .sheep .head:hover .ear.one, .sheep .head:hover .ear.two {transform:rotate(0deg);} .sheep .head .eye {display:inline-block;width:1em;height:1em;border-radius:100%;background:white;position:absolute;overflow:hidden;}.sheep .head .eye:before {content:"";display:inline-block;background:black;width:50%;height:50%;border-radius:100%;position:absolute;right:10%;bottom:10%;transition:all 0.3s;}.sheep .head .eye.one {right:-2%;top:1.7em;}.sheep .head .eye.two {right:2.5em;top:1.7em;}.sheep .head .ear {background:#211e21;width:50%;height:30%;border-radius:100%;position:absolute;}.sheep .head .ear.one {left:-10%;top:5%;transform:rotate(-30deg);}.sheep .head .ear.two {top:2%;right:-5%;transform:rotate(20deg);}.sheep .body {display:inline-block;width:7em;height:7em;border-radius:100%;background:white;position:relative;vertical-align:middle;margin-right:-3em;}.sheep .legs {display:inline-block;position:absolute;top:80%;left:10%;z-index:-1;}.sheep .legs .leg {display:inline-block;background:#141214;width:0.5em;height:2.5em;margin:0.2em;}.sheep:before {content:"";display:inline-block;position:absolute;top:112%;width:100%;height:10%;border-radius:100%;background:rgba(0, 0, 0, 0.4);}</style></head><body>  <div class="scene"><div class="text">404</div><div class="text">Page Not Found!</div><br><div class="sheep"><span class="top"><div class="body"></div><div class="head"><div class="eye one"></div><div class="eye two"></div><div class="ear one"></div><div class="ear two"></div></div></span><div class="legs"><div class="leg"></div><div class="leg"></div><div class="leg"></div><div class="leg"></div></div></div></div></body></html>' > /var/www/404.html
+
+echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Error 500</title><style>body {background:#22a7f0;font-family:"Roboto", sans-serif;width:100%;overflow:hidden;}.cloud-container {position:absolute;top:0px;left:0px;}.cloud-container > svg {display:block;position:absolute;width:200px;left:0px;fill:#fff;opacity:0.2;-webkit-transform:translateX(-100%);transform:translateX(-100%);-webkit-animation:cloud-passover linear infinite;animation:cloud-passover linear infinite;}.cloud-container > svg:nth-child(1) {top:20px;-webkit-animation-delay:2s;animation-delay:2s;-webkit-animation-duration:12s;animation-duration:12s;}.cloud-container > svg:nth-child(2) {top:160px;-webkit-animation-delay:4s;animation-delay:4s;-webkit-animation-duration:13s;animation-duration:13s;}.cloud-container > svg:nth-child(3) {top:280px;-webkit-animation-delay:6s;animation-delay:6s;-webkit-animation-duration:11s;animation-duration:11s;}@-webkit-keyframes cloud-passover {from {-webkit-transform:translateX(-100%);transform:translateX(-100%);}  to {-webkit-transform:translateX(100vw);transform:translateX(100vw);}}@keyframes cloud-passover {from {-webkit-transform:translateX(-100%);transform:translateX(-100%);}  to {-webkit-transform:translateX(100vw);transform:translateX(100vw);}}.container {display:flex;width:100vw;height:100vh;align-items:center;justify-content:center;}.content {color:#fff;width:600px;}.heading {font-size:100px;font-weight:300;}.sorry {margin-top:20px;font-size:35px;font-weight:300;line-height:1.5;text-align:center;}</style></head><body><div class="cloud-container"><svg xmlns="http://www.w3.org/2000/svg" viewBox="31 111 450 290"><text x="120" y="320" font-size="100">Error</text><path d="M399.3 232.8c0-1.2.2-2.4.2-3.6 0-64.3-52.8-117.2-116.8-117.2-46.1 0-85.8 27.9-104.4 67-8.1-4.1-17.1-6.4-26.8-6.4-29.6 0-54.1 23.7-58.9 52C57.4 236.8 32 268.8 32 308.4c0 49.8 40.1 91.6 89.6 91.6H398c45 0 82-38.9 82-84.3 0-45.6-35.4-82.8-80.7-82.9zm-1.8 150.8l-3.2.4H122.4c-40.9 0-74.2-34.9-74.2-76.1 0-31.9 20.2-58.4 50.2-68.8l8.4-3 1.5-8.8c3.6-21.6 22.1-39.3 43.9-39.3 6.9 0 13.7 1.6 19.9 4.8l13.5 6.8 6.5-13.7c16.6-34.9 52.1-58.2 90.4-58.2 55.3 0 100.9 44.1 100.9 99.7 0 13.3-.2 20.3-.2 20.3l15.2.1c36.7.5 65.6 30.5 65.6 67.4 0 36.9-29.8 68.2-66.5 68.4z" /></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="31 111 450 290"><text x="150" y="320" font-size="100">500</text><path d="M399.3 232.8c0-1.2.2-2.4.2-3.6 0-64.3-52.8-117.2-116.8-117.2-46.1 0-85.8 27.9-104.4 67-8.1-4.1-17.1-6.4-26.8-6.4-29.6 0-54.1 23.7-58.9 52C57.4 236.8 32 268.8 32 308.4c0 49.8 40.1 91.6 89.6 91.6H398c45 0 82-38.9 82-84.3 0-45.6-35.4-82.8-80.7-82.9zm-1.8 150.8l-3.2.4H122.4c-40.9 0-74.2-34.9-74.2-76.1 0-31.9 20.2-58.4 50.2-68.8l8.4-3 1.5-8.8c3.6-21.6 22.1-39.3 43.9-39.3 6.9 0 13.7 1.6 19.9 4.8l13.5 6.8 6.5-13.7c16.6-34.9 52.1-58.2 90.4-58.2 55.3 0 100.9 44.1 100.9 99.7 0 13.3-.2 20.3-.2 20.3l15.2.1c36.7.5 65.6 30.5 65.6 67.4 0 36.9-29.8 68.2-66.5 68.4z" /></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="31 111 450 290"><text x="200" y="320" font-size="100">:(</text><path d="M399.3 232.8c0-1.2.2-2.4.2-3.6 0-64.3-52.8-117.2-116.8-117.2-46.1 0-85.8 27.9-104.4 67-8.1-4.1-17.1-6.4-26.8-6.4-29.6 0-54.1 23.7-58.9 52C57.4 236.8 32 268.8 32 308.4c0 49.8 40.1 91.6 89.6 91.6H398c45 0 82-38.9 82-84.3 0-45.6-35.4-82.8-80.7-82.9zm-1.8 150.8l-3.2.4H122.4c-40.9 0-74.2-34.9-74.2-76.1 0-31.9 20.2-58.4 50.2-68.8l8.4-3 1.5-8.8c3.6-21.6 22.1-39.3 43.9-39.3 6.9 0 13.7 1.6 19.9 4.8l13.5 6.8 6.5-13.7c16.6-34.9 52.1-58.2 90.4-58.2 55.3 0 100.9 44.1 100.9 99.7 0 13.3-.2 20.3-.2 20.3l15.2.1c36.7.5 65.6 30.5 65.6 67.4 0 36.9-29.8 68.2-66.5 68.4z" /></svg></div><div class="container"><div class="content"><div class="heading">System Error</div><div class="sorry">Error 500</div></div></div></body></html>' > /var/www/500.html
+
+cat > /etc/nginx/include_standard_errors.conf <<ENDD
+error_page 404 /404.html;
+error_page 500 502 503 504 /500.html;
+location = /500.html { root /var/www; internal; }
+location = /404.html { root /var/www; internal; }
+ENDD
+
+cat > /etc/nginx/include_cache.conf <<ENDD
+# https://www.nginx.com/blog/nginx-caching-guide/
+# needs in nginx.conf>http: proxy_cache_path /var/cache/nginx/my_cache levels=1:2 keys_zone=my_cache:10m max_size=10g inactive=60m use_temp_path=off;
+proxy_cache_valid 200 1d;
+proxy_cache_revalidate on;
+proxy_cache_min_uses 3;
+proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+proxy_cache_background_update on;
+proxy_cache_lock on;
+ENDD
 
 # to replace the wildcard catcher, cleanup and modify the nginx.conf
 sed -i "/\s*#/d" /etc/nginx/nginx.conf
