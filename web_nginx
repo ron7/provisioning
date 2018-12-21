@@ -84,7 +84,7 @@ server {
 
 #  ## SSL: forcing SSL:
 #      if (\$check_ssl_prot = P) {
-#         rewrite ^   https://\$server_name\$request_uri permanent;
+#         rewrite ^   https://\$server_name\$request_uri? permanent;
 #      }
 
 ##  if (\$enablessl = 1) {
@@ -117,9 +117,9 @@ server {
 
   if (\$request_method !~ ^(GET|HEAD|POST)$ ) { return 444;  }
 
-    location = /favicon.ico { try_files /favicon.ico =204; access_log off; log_not_found off; }
-    location = /favicon.png { try_files /favicon.png =204; access_log off; log_not_found off; }
-    location = /robots.txt { access_log off; log_not_found off; }
+    location = /favicon.ico { try_files /favicon.ico =204; access_log off; log_not_found off; expires max; }
+    location = /favicon.png { try_files /favicon.png =204; access_log off; log_not_found off; expires max; }
+    location = /robots.txt { access_log off; log_not_found off; expires max; }
 
     location ~ /.well-known { allow all;}
     location ~ /\\. { deny  all;}
@@ -131,7 +131,7 @@ server {
       add_header Cache-Control "public";
       add_header Access-Control-Allow-Origin *;
       add_header X-Frame-Options "DENY";
-      expires +1y;
+      expires max;
       try_files \$uri \$uri/ /index.php\$is_args\$args;
     }
     location ~* \\.(zip|gz|gzip|bz2|csv|xml)$ {
@@ -186,12 +186,12 @@ server {
   index index.php index.html;
   include include_standard_errors.conf;
 
-  location = /robots.txt { access_log off; log_not_found off; }
+  location = /robots.txt { access_log off; log_not_found off; expires max; }
   location ~ /\\. { deny  all; access_log off; log_not_found off; }
   location ~* ^/(?:README|LICENSE[^.]*|LEGALNOTICE)(?:\\.txt)*$ {  return 404;  }
   location ~* ^.+.(jpg|jpeg|gif|png|ico|css|js)$ {
-  valid_referers server_names;
-  if (\$invalid_referer)  { return 444; }
+  #valid_referers server_names;
+  #if (\$invalid_referer)  { return 444; }
     expires    max;
     access_log off;
     add_header Cache-Control public;
