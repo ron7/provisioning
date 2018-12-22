@@ -1,6 +1,9 @@
 #!/bin/bash
 
-PHP_VER="7.2"
+PHP_VER=$(dpkg -l|grep php|grep fpm|awk '{print $2}'|sort -n|tail -1|sed "s/php//; s/-fpm//")
+if [ -z $PHP_VER ];then
+  PHP_VER=7.2
+fi
 
 export LC_ALL=C
 apt update -qq
