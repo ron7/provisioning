@@ -178,13 +178,15 @@ nds=$(grep "server {" /etc/nginx/nginx.conf --line-number|cut -d: -f1)
 nde=$(($(grep "include\s\+\/etc" /etc/nginx/nginx.conf --line-number|cut -d: -f1) - 1))
 sed -i "${nds},${nde}d" /etc/nginx/nginx.conf
 
-/usr/local/bin/web_nginx _ www-data /var/www
-if [[ ! `grep "listen 80 default_server" /etc/nginx/sites-available/_.conf` ]];then
-  sed -i '1,/RE/s/listen 80;/listen 80 default_server;/' /etc/nginx/sites-available/_.conf
-fi
+if ! grep -rE "default_server" /etc/nginx/sites-enabled/*;then
+  /usr/local/bin/web_nginx _ www-data /var/www
+  if [[ ! `grep "listen 80 default_server" /etc/nginx/sites-available/_.conf` ]];then
+    sed -i '1,/RE/s/listen 80;/listen 80 default_server;/' /etc/nginx/sites-available/_.conf
+  fi
 
-if [[ ! `grep "data { deny all; }" /etc/nginx/sites-available/_.conf` ]];then
-  sed -i "/.well-known/i \ \ \ \ location ^~ \/data { deny all; }" /etc/nginx/sites-available/_.conf
+  if [[ ! `grep "data { deny all; }" /etc/nginx/sites-available/_.conf` ]];then
+    sed -i "/.well-known/i \ \ \ \ location ^~ \/data { deny all; }" /etc/nginx/sites-available/_.conf
+  fi
 fi
 
 if `nginx -qt`;then
