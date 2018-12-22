@@ -71,7 +71,7 @@ sed -i "s/^upload_max_filesize = 2M/upload_max_filesize = 32M/g" /etc/php/${PHP_
 sed -i "s/^post_max_size = 8M/post_max_size = 64M/g" /etc/php/${PHP_VER}/fpm/php.ini
 #set opcache optimal settings: https://secure.php.net/manual/en/opcache.installation.php
 if ! grep -E "^opcache.max_accelerated_files" /etc/php/${PHP_VER}/fpm/php.ini ;then sed -iE '/^\[opcache\]/a opcache.max_accelerated_files=50000' /etc/php/${PHP_VER}/fpm/php.ini ;fi
-if ! grep -E "^opcache.revalidate_freq" /etc/php/${PHP_VER}/fpm/php.ini ;then sed -iE '/^\[opcache\]/a opcache.revalidate_freq=60' /etc/php/${PHP_VER}/fpm/php.ini ;fi
+if ! grep -E "^opcache.revalidate_freq" /etc/php/${PHP_VER}/fpm/php.ini ;then sed -iE '/^\[opcache\]/a opcache.revalidate_freq=2' /etc/php/${PHP_VER}/fpm/php.ini ;fi
 if ! grep -E "^opcache.memory_consumption" /etc/php/${PHP_VER}/fpm/php.ini ;then sed -iE '/^\[opcache\]/a opcache.memory_consumption=128' /etc/php/${PHP_VER}/fpm/php.ini ;fi
 if ! grep -E "^opcache.interned_strings_buffer" /etc/php/${PHP_VER}/fpm/php.ini ;then sed -iE '/^\[opcache\]/a opcache.interned_strings_buffer=8' /etc/php/${PHP_VER}/fpm/php.ini ;fi
 if ! grep -E "^opcache.fast_shutdown" /etc/php/${PHP_VER}/fpm/php.ini ;then sed -iE '/^\[opcache\]/a opcache.fast_shutdown=1' /etc/php/${PHP_VER}/fpm/php.ini ;fi
