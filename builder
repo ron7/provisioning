@@ -1,13 +1,21 @@
 #!/bin/bash
 
+export LC_ALL=C
+apt purge popularity-contest snapd -yqq
+
+# Add php7.3
+echo "deb http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" >> /etc/apt/sources.list
+echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" >> /etc/apt/sources.list
+apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4F4EA0AAE5267A6C
+
+apt update -qq
+
+
 PHP_VER=$(dpkg -l|grep php|grep fpm|awk '{print $2}'|sort -n|tail -1|sed "s/php//; s/-fpm//")
 if [ -z $PHP_VER ];then
-  PHP_VER=7.2
+  PHP_VER=7.3
 fi
 
-export LC_ALL=C
-apt update -qq
-apt purge popularity-contest snapd -yqq
 apt install -y curl git vim
 cd
 git clone https://github.com/openssl/openssl --depth 1
