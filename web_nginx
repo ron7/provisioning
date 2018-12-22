@@ -145,7 +145,8 @@ server {
 
     location / {
     index index.php index.html;
-    try_files \$uri \$uri/ /index.php?q=\$uri;
+    #try_files \$uri \$uri/ /index.php?q=\$uri;
+    try_files \$uri \$uri/ /index.php\$is_args\$args;
 
 #   limit_req zone=one burst=5 nodelay;
 #   limit_conn two 1;
@@ -200,7 +201,8 @@ server {
   }
   location / {
   index index.php index.html;
-  try_files \$uri \$uri/ /index.php?q=\$uri;
+  #try_files \$uri \$uri/ /index.php?q=\$uri;
+  try_files \$uri \$uri/ /index.php\$is_args\$args;
 }
 
       location ~ \.php$ {
