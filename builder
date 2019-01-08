@@ -69,6 +69,15 @@ if ! grep "^net.core.somaxconn" /etc/sysctl.conf;then echo "net.core.somaxconn =
 if ! grep "^net.core.netdev_max_backlog" /etc/sysctl.conf;then echo "net.core.netdev_max_backlog = $maxopen" >> /etc/sysctl.conf;sysctl -p;fi
 # some more tweaks for kernel if needed: https://serverfault.com/questions/398972/need-to-increase-nginx-throughput-to-an-upstream-unix-socket-linux-kernel-tun
 
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/security_guide/sect-security_guide-server_security-disable-source-routing
+# and https://askubuntu.com/questions/118273/what-are-icmp-redirects-and-should-they-be-blocked
+if ! grep "^net.ipv4.conf.all.accept_redirects" /etc/sysctl.conf;then echo "net.ipv4.conf.all.accept_redirects = 0" >> /etc/sysctl.conf;sysctl -p;fi
+if ! grep "^net.ipv6.conf.all.accept_redirects" /etc/sysctl.conf;then echo "net.ipv6.conf.all.accept_redirects = 0" >> /etc/sysctl.conf;sysctl -p;fi
+if ! grep "^net.ipv4.conf.all.send_redirects" /etc/sysctl.conf;then echo "net.ipv4.conf.all.send_redirects = 0" >> /etc/sysctl.conf;sysctl -p;fi
+if ! grep "^net.ipv4.conf.default.accept_redirects" /etc/sysctl.conf;then echo "net.ipv4.conf.default.accept_redirects = 0" >> /etc/sysctl.conf;sysctl -p;fi
+if ! grep "^net.ipv6.conf.default.accept_redirects" /etc/sysctl.conf;then echo "net.ipv6.conf.default.accept_redirects = 0" >> /etc/sysctl.conf;sysctl -p;fi
+if ! grep "^net.ipv4.conf.default.send_redirects" /etc/sysctl.conf;then echo "net.ipv4.conf.default.send_redirects = 0" >> /etc/sysctl.conf;sysctl -p;fi
+
 if ! grep -E "^session required\s+pam_limits.so" /etc/pam.d/common-session;then echo "session required pam_limits.so" >> /etc/pam.d/common-session;fi
 if ! grep -E "^session required\s+pam_limits.so" /etc/pam.d/common-session-noninteractive;then echo "session required pam_limits.so" >> /etc/pam.d/common-session-noninteractive;fi
 
