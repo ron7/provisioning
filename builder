@@ -16,7 +16,7 @@ if [ -z $PHP_VER ];then
   PHP_VER=7.3
 fi
 
-apt install -y curl git vim
+apt install -y curl git vim opendkim opendkim-tools postfix
 cd
 git clone https://github.com/openssl/openssl --depth 1
 bash <(curl -f -L -sSk https://ngxpagespeed.com/install)  --nginx-version latest -y -a '--prefix=/etc/nginx --sbin-path=/usr/sbin/nginx --conf-path=/etc/nginx/nginx.conf --pid-path=/var/run/nginx.pid --lock-path=/var/run/nginx.lock --user=www-data --group=www-data --error-log-path=/var/log/nginx/error.log --http-log-path=/var/log/nginx/access.log --with-http_ssl_module --with-http_gzip_static_module --with-openssl=/root/openssl --with-http_v2_module --with-http_sub_module --with-http_addition_module'
@@ -229,6 +229,35 @@ locale-gen bg_BG.UTF-8 en_US.UTF-8
 echo LANG=C.UTF-8 > /etc/default/locale
 
 apt update -qq && apt dist-upgrade -yqq && apt autoremove -yqq && dpkg -l|grep ^rc|awk '{print $2}'|xargs apt purge -yqq
+
+#DKIM (partial) config
+host=$(hostname -f|awk -F'.' '{gsub("http://|/.*","")} NF>2{$1="";$0=substr($0, 2)}1' OFS='.')
+opendkim-genkey -d $host -D /etc/dkimkeys/
+#add postfix to group: opendkim so it can read sock
+adduser postfix opendkim
+sed -iE "s/^UMask.*/UMask 002/" /etc/opendkim.conf
+if ! grep -E "^Selector" /etc/opendkim.conf ;then sed -iE '/^UMask/a Selector default' /etc/opendkim.conf ;fi
+if ! grep -E "^KeyFile" /etc/opendkim.conf ;then sed -iE '/^UMask/a KeyFile /etc/dkimkeys/default.private' /etc/opendkim.conf ;fi
+if ! grep -E "^Domain" /etc/opendkim.conf ;then sed -iE "/^UMask/a Domain $host" /etc/opendkim.conf ;fi
+if ! grep -E "^Socket" /etc/opendkim.conf ;then sed -iE '/^UMask/a Socket inet:8892@localhost' /etc/opendkim.conf ;fi
+#add few lines to postfix main.cf for DKIM:
+if ! grep -E "^milter_default_action" /etc/postfix/main.cf ;then echo "milter_default_action = accept" >> /etc/postfix/main.cf ;fi
+if ! grep -E "^milter_protocol" /etc/postfix/main.cf ;then echo "milter_protocol = 6" >> /etc/postfix/main.cf ;fi
+if ! grep -E "^smtpd_milters" /etc/postfix/main.cf ;then echo "smtpd_milters = inet:localhost:8892" >> /etc/postfix/main.cf ;fi
+if ! grep -E "^non_smtpd_milters" /etc/postfix/main.cf ;then echo "non_smtpd_milters = inet:localhost:8892" >> /etc/postfix/main.cf ;fi
+if [ -e /etc/dkimkeys/default.txt ];then
+  echo
+  echo ::: DKIM
+  echo
+  echo Please set this DKIM record for host: $host
+  cat /etc/dkimkeys/default.txt
+  echo
+  echo
+fi
+
+service postfix restart
+service opendkim restart
+
 # this note should always be at the end so cust can see it:
 echo
 echo NOTE: you need to visit your server and configure rainloop at http://$(curl -s ipme.me)/?admin user: admin , default pass: 12345, CHANGE THE PASS
