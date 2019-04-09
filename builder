@@ -87,14 +87,14 @@ ENDD
 apt install -y php${PHP_VER}-cli php${PHP_VER}-common php${PHP_VER}-curl php${PHP_VER}-fpm php${PHP_VER}-gd php${PHP_VER}-intl php${PHP_VER}-json php${PHP_VER}-ldap php${PHP_VER}-mbstring php${PHP_VER}-mysql php${PHP_VER}-opcache php${PHP_VER}-readline php${PHP_VER}-sqlite3 php${PHP_VER}-xml php${PHP_VER}-xmlrpc php${PHP_VER}-zip mariadb-server certbot bash-completion
 
 # user level limits for open files
-if ! grep "^\*\ soft\ noproc\ $maxopen" /etc/security/limits.conf;then echo "* soft noproc $maxopen" >> /etc/security/limits.conf;fi
-if ! grep "^\*\ hard\ noproc\ $maxopen" /etc/security/limits.conf;then echo "* hard noproc $maxopen" >> /etc/security/limits.conf;fi
-if ! grep "^\*\ soft\ nofile\ $maxopen" /etc/security/limits.conf;then echo "* soft nofile $maxopen" >> /etc/security/limits.conf;fi
-if ! grep "^\*\ hard\ nofile\ $maxopen" /etc/security/limits.conf;then echo "* hard nofile $maxopen" >> /etc/security/limits.conf;fi
-if ! grep "^root\ soft\ noproc\ $maxopen" /etc/security/limits.conf;then echo "root soft noproc $maxopen" >> /etc/security/limits.conf;fi
-if ! grep "^root\ hard\ noproc\ $maxopen" /etc/security/limits.conf;then echo "root hard noproc $maxopen" >> /etc/security/limits.conf;fi
-if ! grep "^root\ soft\ nofile\ $maxopen" /etc/security/limits.conf;then echo "root soft nofile $maxopen" >> /etc/security/limits.conf;fi
-if ! grep "^root\ hard\ nofile\ $maxopen" /etc/security/limits.conf;then echo "root hard nofile $maxopen" >> /etc/security/limits.conf;fi
+if ! grep "^\*\ soft\ nproc" /etc/security/limits.conf;then echo "* soft nproc $maxopen" >> /etc/security/limits.conf;fi
+if ! grep "^\*\ hard\ nproc" /etc/security/limits.conf;then echo "* hard nproc $maxopen" >> /etc/security/limits.conf;fi
+if ! grep "^\*\ soft\ nofile" /etc/security/limits.conf;then echo "* soft nofile $maxopen" >> /etc/security/limits.conf;fi
+if ! grep "^\*\ hard\ nofile" /etc/security/limits.conf;then echo "* hard nofile $maxopen" >> /etc/security/limits.conf;fi
+if ! grep "^root\ soft\ nproc" /etc/security/limits.conf;then echo "root soft nproc $maxopen" >> /etc/security/limits.conf;fi
+if ! grep "^root\ hard\ nproc" /etc/security/limits.conf;then echo "root hard nproc $maxopen" >> /etc/security/limits.conf;fi
+if ! grep "^root\ soft\ nofile" /etc/security/limits.conf;then echo "root soft nofile $maxopen" >> /etc/security/limits.conf;fi
+if ! grep "^root\ hard\ nofile" /etc/security/limits.conf;then echo "root hard nofile $maxopen" >> /etc/security/limits.conf;fi
 
 # add limit to sysctl (this overwrites /proc/sys/fs/file-max value, so not using it for now..)
 #if ! grep "^fs.file-max" /etc/sysctl.conf;then echo "fs.file-max = $maxopen" >> /etc/sysctl.conf;sysctl -p;fi
