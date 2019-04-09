@@ -2,11 +2,11 @@
 
 `bash <(curl -f -L -sS https://raw.githubusercontent.com/ron7/provisioning/master/builder)`
 
-if you do not need the default webmail client:
+if you DO need the default webmail client:
 
 `bash <(curl -f -L -sS https://raw.githubusercontent.com/ron7/provisioning/master/builder) -m`
 
-or if you do not need the custom NGINX built with PageSpeed, use the default `nginx` package with:
+or if you DO need the custom NGINX built with PageSpeed, use the default `nginx` package with:
 
 `bash <(curl -f -L -sS https://raw.githubusercontent.com/ron7/provisioning/master/builder) -n`
 
