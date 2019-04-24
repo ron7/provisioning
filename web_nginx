@@ -114,6 +114,7 @@ server {
 
 # include include_cache.conf;
   include include_standard_errors.conf;
+  include include_csp.conf;
 
   if (\$request_method !~ ^(GET|HEAD|POST)$ ) { return 444;  }
 
