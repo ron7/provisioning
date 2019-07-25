@@ -41,14 +41,14 @@ if [ -z $PHP_VER ];then
   PHP_VER=7.3
 fi
 
-if [ -n $BUILD ];then #nobuild not set for nginx
+if [ -n "$BUILD" ];then #nobuild not set for nginx
   installnginx=
 else
   installnginx=nginx
 fi
 apt install -y curl git vim opendkim opendkim-tools postfix $installnginx
 
-if [ -n $BUILD ];then
+if [ -n "$BUILD" ];then
 
   cd
   git clone https://github.com/openssl/openssl --depth 1
@@ -194,11 +194,11 @@ if ! grep "^export\ HISTCONTROL=" /etc/bash.bashrc;then echo "export HISTCONTROL
 if ! grep "^export\ HISTFILESIZE=" /etc/bash.bashrc;then echo "export HISTFILESIZE=" >> /etc/bash.bashrc;fi
 if ! grep "^export\ HISTSIZE=" /etc/bash.bashrc;then echo "export HISTSIZE=" >> /etc/bash.bashrc;fi
 
-if [ -n $BUILD ];then #nobuild not set for nginx
+if [ -n "$BUILD" ];then #nobuild not set for nginx
   rm -rf /root/openssl /root/nginx-* /root/incubator-pagespeed-ngx-latest-stable
 fi
 
-if [ -n $ADDMAIL ];then # do not exclude webmail
+if [ -n "$ADDMAIL" ];then # do not exclude webmail
   # add /var/www, and put rainloop there as default site
   mkdir -p /var/www && cd /var/www && wget -q https://www.rainloop.net/repository/webmail/rainloop-community-latest.zip -O rainloop-community-latest.zip && unzip -qo rainloop-community-latest.zip && rm -rf rainloop-community-latest.zip
 fi
@@ -316,7 +316,7 @@ service postfix restart
 service opendkim restart
 
 # this note should always be at the end so cust can see it:
-if [ -n $ADDMAIL ];then # do not exclude webmail
+if [ -n "$ADDMAIL" ];then # do not exclude webmail
   echo
   echo NOTE: you need to visit your server and configure rainloop at http://$(curl -s ipme.me)/?admin user: admin , default pass: 12345, CHANGE THE PASS
   echo
