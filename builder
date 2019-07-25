@@ -248,9 +248,9 @@ sed -i "/\s*#/d" /etc/nginx/nginx.conf
 sed -i "/^$/d" /etc/nginx/nginx.conf
 
 # nginx delete from start nds to end nde:
-nds=$(grep "server {" /etc/nginx/nginx.conf --line-number|cut -d: -f1)
-nde=$(($(grep "include\s\+\/etc" /etc/nginx/nginx.conf --line-number|cut -d: -f1) - 1))
-sed -i "${nds},${nde}d" /etc/nginx/nginx.conf
+#nds=$(grep "server {" /etc/nginx/nginx.conf --line-number|cut -d: -f1)
+#nde=$(($(grep "include\s\+\/etc" /etc/nginx/nginx.conf --line-number|cut -d: -f1) - 1))
+#sed -i "${nds},${nde}d" /etc/nginx/nginx.conf
 
 if ! grep -rE "default_server" /etc/nginx/sites-enabled/*;then
   /usr/local/bin/web_nginx _ www-data /var/www
