@@ -194,7 +194,7 @@ if ! grep "^export\ HISTCONTROL=" /etc/bash.bashrc;then echo "export HISTCONTROL
 if ! grep "^export\ HISTFILESIZE=" /etc/bash.bashrc;then echo "export HISTFILESIZE=" >> /etc/bash.bashrc;fi
 if ! grep "^export\ HISTSIZE=" /etc/bash.bashrc;then echo "export HISTSIZE=" >> /etc/bash.bashrc;fi
 
-if [ -z $NOBUILD ];then #nobuild not set for nginx
+if [ -n $BUILD ];then #nobuild not set for nginx
   rm -rf /root/openssl /root/nginx-* /root/incubator-pagespeed-ngx-latest-stable
 fi
 
