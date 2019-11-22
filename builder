@@ -30,8 +30,9 @@ env
 apt purge popularity-contest snapd -yqq
 
 # Add php7.3
-echo "deb http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" >> /etc/apt/sources.list
-echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" >> /etc/apt/sources.list
+if ! grep -E "^deb http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" /etc/apt/sources.list ;then echo "deb http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" >>  /etc/apt/sources.list ;fi
+if ! grep -E "^deb-src http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" /etc/apt/sources.list ;then echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" >>  /etc/apt/sources.list ;fi
+
 apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4F4EA0AAE5267A6C
 
 if ! grep -E "^kexalgorithms" /etc/ssh/sshd_config;then echo -e "#Strenghten ssh:\nmacs umac-128-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,umac-128@openssh.com,hmac-sha2-256,hmac-sha2-512\nkexalgorithms curve25519-sha256,curve25519-sha256@libssh.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group-exchange-sha256" >> /etc/ssh/sshd_config && service ssh reload;fi
