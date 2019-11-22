@@ -4,13 +4,15 @@
 
 if you DO need the default webmail client:
 
-`bash <(curl -f -L -sS https://raw.githubusercontent.com/ron7/provisioning/master/builder) -m`
+`ADDMAIL=1 bash <(curl -f -L -sS https://raw.githubusercontent.com/ron7/provisioning/master/builder)`
+
+if you DO need to compile nginx:
+
+`BUILD=1 bash <(curl -f -L -sS https://raw.githubusercontent.com/ron7/provisioning/master/builder)`
 
 or if you DO need the custom NGINX built with PageSpeed, use the default `nginx` package with:
 
-`bash <(curl -f -L -sS https://raw.githubusercontent.com/ron7/provisioning/master/builder) -n`
-
-`-n` and `-m` can be also combined.
+`BUILD=1 bash <(curl -f -L -sS https://raw.githubusercontent.com/ron7/provisioning/master/builder)`
 
 One liner for installing docker-ce
 

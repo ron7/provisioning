@@ -1,5 +1,7 @@
 #!/bin/bash
 export LC_ALL=C
+export DEBIAN_FRONTEND=noninteractive
+export APT_LISTCHANGES_FRONTEND=none
 
 while getopts ":n" o; do
   case "${o}" in
@@ -23,7 +25,6 @@ while getopts ":n" o; do
 done
 shift $((OPTIND-1))
 
-
 apt purge popularity-contest snapd -yqq
 
 # Add php7.3
@@ -37,7 +38,9 @@ apt update -qq
 
 
 PHP_VER=$(dpkg -l|grep php|grep fpm|awk '{print $2}'|sort -n|tail -1|sed "s/php//; s/-fpm//")
-if [ -z $PHP_VER ];then
+if [ -n "${PHPVER}" ];then
+  PHP_VER=${PHPVER}
+elif [ -z $PHP_VER ];then
   PHP_VER=7.3
 fi
 
