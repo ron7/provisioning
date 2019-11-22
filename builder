@@ -203,6 +203,7 @@ fi
 
 if [ -n "$ADDMAIL" ];then # do not exclude webmail
   # add /var/www, and put rainloop there as default site
+  web_nginx _ www-data /var/www
   mkdir -p /var/www && cd /var/www && wget -q https://www.rainloop.net/repository/webmail/rainloop-community-latest.zip -O rainloop-community-latest.zip && unzip -qo rainloop-community-latest.zip && rm -rf rainloop-community-latest.zip
 fi
 
