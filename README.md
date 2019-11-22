@@ -6,9 +6,9 @@ if you DO need the default webmail client:
 
 `ADDMAIL=1 bash <(curl -f -L -sS https://raw.githubusercontent.com/ron7/provisioning/master/builder)`
 
-if you DO need to compile nginx:
+if you DO need to force PHP 7.3:
 
-`BUILD=1 bash <(curl -f -L -sS https://raw.githubusercontent.com/ron7/provisioning/master/builder)`
+`PHPVER=7.3 bash <(curl -f -L -sS https://raw.githubusercontent.com/ron7/provisioning/master/builder)`
 
 or if you DO need the custom NGINX built with PageSpeed, use the default `nginx` package with:
 
