@@ -25,6 +25,8 @@ while getopts ":n" o; do
 done
 shift $((OPTIND-1))
 
+env
+
 apt purge popularity-contest snapd -yqq
 
 # Add php7.3
@@ -186,6 +188,10 @@ chmod -x /etc/update-motd.d/*
 #install composer
 cd
 curl -sS https://getcomposer.org/installer -o composer-setup.php && php composer-setup.php --install-dir=/usr/local/bin --filename=composer && rm -f composer-setup.php
+
+if [ -n "$DOCKER" ];then
+  curl -skL $(curl -s https://api.github.com/repos/docker/compose/releases/latest|grep browser_download_url|grep "$(uname -s)-$(uname -m)"|grep -v sha25|head -1|cut -d'"' -f4) -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose
+fi
 
 #enable bash completion
 bcl=$(grep "enable bash completion in interactive shells" /etc/bash.bashrc --line-number|cut -d: -f1)
