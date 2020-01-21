@@ -119,6 +119,14 @@ if ! grep "^net.ipv4.conf.default.accept_redirects" /etc/sysctl.conf;then echo "
 if ! grep "^net.ipv6.conf.default.accept_redirects" /etc/sysctl.conf;then echo "net.ipv6.conf.default.accept_redirects = 0" >> /etc/sysctl.conf;sysctl -p;fi
 if ! grep "^net.ipv4.conf.default.send_redirects" /etc/sysctl.conf;then echo "net.ipv4.conf.default.send_redirects = 0" >> /etc/sysctl.conf;sysctl -p;fi
 
+#https://www.cyberciti.biz/cloud-computing/increase-your-linux-server-internet-speed-with-tcp-bbr-congestion-control/?
+#enable TCP BBR to improve network speed
+if egrep 'CONFIG_TCP_CONG_BBR|CONFIG_NET_SCH_FQ' /boot/config-$(uname -r) > /dev/null;then
+if ! grep "^net.core.default_qdisc=fq" /etc/sysctl.conf > /dev/null ;then echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf;fi
+if ! grep "^net.ipv4.tcp_congestion_control=bbr" /etc/sysctl.conf > /dev/null ;then echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf;fi
+sysctl -p
+fi
+
 if ! grep -E "^session required\s+pam_limits.so" /etc/pam.d/common-session;then echo "session required pam_limits.so" >> /etc/pam.d/common-session;fi
 if ! grep -E "^session required\s+pam_limits.so" /etc/pam.d/common-session-noninteractive;then echo "session required pam_limits.so" >> /etc/pam.d/common-session-noninteractive;fi
 
