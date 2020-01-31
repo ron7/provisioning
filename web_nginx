@@ -178,6 +178,8 @@ add_header X-XSS-Protection "1; mode=block";
   }
 
     location / {
+    add_header 'Cache-Control' "public, max-age=31536000";
+    add_header 'Access-Control-Allow-Origin' "*" always;
     if (\$args ~ "^author=\\d") { return 444; }
     index index.php index.html;
     #try_files \$uri \$uri/ /index.php?q=\$uri;
@@ -321,6 +323,7 @@ add_header X-XSS-Protection "1; mode=block";
   location / {
     add_header 'Cache-Control' "public, max-age=31536000";
     add_header 'Access-Control-Allow-Origin' "*" always;
+    if (\$args ~ "^author=\\d") { return 444; }
 
     index index.php index.html;
     #try_files \$uri \$uri/ /index.php?q=\$uri;
