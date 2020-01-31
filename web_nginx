@@ -121,9 +121,8 @@ add_header 'X-Frame-Options' "SAMEORIGIN";
 # Block pages from loading when they detect reflected XSS attacks
 add_header X-XSS-Protection "1; mode=block";
 
-
 ## Enable below block for WP Security, and whitelist/allow your Management IPs
-#  location ~* ^/(?:wp-json|xmlrpc.php|wp-login.php).*$ {
+#   location ~* ^/(?:wp-json|xmlrpc.php|wp-login.php|wp-admin|readme.html|wp-includes|feed\\/).*$ {
 #
 #    allow 127.0.0.1/32;
 #    allow 10.10.10.0/24;
@@ -142,21 +141,23 @@ add_header X-XSS-Protection "1; mode=block";
 #    index index.php index.html;
 #    try_files \$uri \$uri/ /index.php\$is_args\$args;
 #  }
-
+#  # Deny access to any files with a .php extension in the uploads directory. Works in sub-directory installs and also in multisite network
+#  location ~* ^/(?:uploads|files|wp-content|wp-includes)/.*\\.php\\$ { deny all; }
+#
+#  # Deny access to uploads that aren’t images, videos, music, etc.
+#  location ~* ^/wp-content/uploads/.*.(html|htm|shtml|php|js|swf|css)$ { deny all; }
 
     location = /favicon.ico { try_files /favicon.ico =204; access_log off; log_not_found off; expires max; }
     location = /favicon.png { try_files /favicon.png =204; access_log off; log_not_found off; expires max; }
-    location ~* ^/(?:README|LICENSE[^.]*|LEGALNOTICE)(?:\\.txt)*$ {  return 404;  }
+    location ~* ^/(?:README|LICENSE[^.]*|LEGALNOTICE)(?:\\.txt)*$ {  return 444;  }
     location = /robots.txt { expires max; }
     location ~ /.well-known { allow all; }
     location ~ /\\. { deny  all; }
 
-
     location ~* \\.(ico|jpg|jpeg|png|gif|svg|js|css|swf|eot|ttf|otf|woff|woff2|bz2|tar|mid|midi|wav|bmp|rtf|zip)$ {
 
-    #valid_referers server_names; # enable these two lines for hotlinking, but test as some resources will stop loading
-    #if (\$invalid_referer)  { return 444; }
-
+    # valid_referers server_names; # enable these two lines for hotlinking, but test as some resources will stop loading
+    # if (\$invalid_referer)  { return 444; }
 
     add_header 'Cache-Control' "public, max-age=31536000";
     add_header 'X-Frame-Options' "SAMEORIGIN";
@@ -177,6 +178,7 @@ add_header X-XSS-Protection "1; mode=block";
   }
 
     location / {
+    if (\$args ~ "^author=\\d") { return 444; }
     index index.php index.html;
     #try_files \$uri \$uri/ /index.php?q=\$uri;
     try_files \$uri \$uri/ /index.php\$is_args\$args;
@@ -259,9 +261,8 @@ add_header 'X-Frame-Options' "SAMEORIGIN";
 # Block pages from loading when they detect reflected XSS attacks
 add_header X-XSS-Protection "1; mode=block";
 
-
 ## Enable below block for WP Security, and whitelist/allow your Management IPs
-#  location ~* ^/(?:wp-json|xmlrpc.php|wp-login.php).*$ {
+#   location ~* ^/(?:wp-json|xmlrpc.php|wp-login.php|wp-admin|readme.html|wp-includes|feed\\/).*$ {
 #
 #    allow 127.0.0.1/32;
 #    allow 10.10.10.0/24;
@@ -280,10 +281,15 @@ add_header X-XSS-Protection "1; mode=block";
 #    index index.php index.html;
 #    try_files \$uri \$uri/ /index.php\$is_args\$args;
 #  }
+#  # Deny access to any files with a .php extension in the uploads directory. Works in sub-directory installs and also in multisite network
+#  location ~* ^/(?:uploads|files|wp-content|wp-includes)/.*\\.php\\$ { deny all; }
+#
+#  # Deny access to uploads that aren’t images, videos, music, etc.
+#  location ~* ^/wp-content/uploads/.*.(html|htm|shtml|php|js|swf|css)$ { deny all; }
 
     location = /favicon.ico { try_files /favicon.ico =204; access_log off; log_not_found off; expires max; }
     location = /favicon.png { try_files /favicon.png =204; access_log off; log_not_found off; expires max; }
-    location ~* ^/(?:README|LICENSE[^.]*|LEGALNOTICE)(?:\\.txt)*$ {  return 404;  }
+    location ~* ^/(?:README|LICENSE[^.]*|LEGALNOTICE)(?:\\.txt)*$ {  return 444;  }
     location = /robots.txt { expires max; }
     location ~ /.well-known { allow all; }
     location ~ /\\. { deny  all; }
@@ -291,8 +297,8 @@ add_header X-XSS-Protection "1; mode=block";
 
     location ~* \\.(ico|jpg|jpeg|png|gif|svg|js|css|swf|eot|ttf|otf|woff|woff2|bz2|tar|mid|midi|wav|bmp|rtf|zip)$ {
 
-  #valid_referers server_names; # enable these two lines for hotlinking, but test as some resources will stop loading
-  #if (\$invalid_referer)  { return 444; }
+    # valid_referers server_names; # enable these two lines for hotlinking, but test as some resources will stop loading
+    # if (\$invalid_referer)  { return 444; }
 
     add_header 'Cache-Control' "public, max-age=31536000";
     add_header 'X-Frame-Options' "SAMEORIGIN";
