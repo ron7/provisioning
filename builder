@@ -208,6 +208,10 @@ for z in `seq $(($bcl+1)) $(($bcl+7))`;do
   sed -i "${z}s/^#//" /etc/bash.bashrc
 done
 
+if ! grep "^PS1='\\\[\\033\[01\;\d\+m\\\]" /root/.bashrc;then sed -iE "/^unset color_prompt.*/a PS1='\\\[\\\033[01;37m\\\]\$\(date +"%m:%d:%H:%M:%S"\)\\\[\\\033[01;34m\\\] \\\[\\\033[0;35m\\\]\$\{debian_chroot:\+\(\$debian_chroot\)\}\\\[\\\033[01;31m\\\]\\\h\\\[\\\033[01;34m\\\] \\\W\\\[\\\033[1;32m\\\]\$(__git_ps1 \" [\%s]\")\\\[\\\033[01;34m\\\] \\\\$\\\[\\\033[00m\\\] \'" /root/.bashrc;fi
+
+if ! grep "^PS1='\\\[\\033\[01\;\d\+m\\\]" /etc/skel/.bashrc;then sed -iE "/^unset color_prompt.*/a PS1='\\\[\\\033[01;37m\\\]\$\(date +"%m:%d:%H:%M:%S"\)\\\[\\\033[01;34m\\\] \\\[\\\033[0;35m\\\]\$\{debian_chroot:\+\(\$debian_chroot\)\}\\\[\\\033[01;32m\\\]\\\h\\\[\\\033[01;34m\\\] \\\W\\\[\\\033[1;32m\\\]\$(__git_ps1 \" [\%s]\")\\\[\\\033[01;34m\\\] \\\\$\\\[\\\033[00m\\\] \'" /etc/skel/.bashrc;fi
+
 if ! grep "^export\ HISTCONTROL=" /etc/bash.bashrc;then echo "export HISTCONTROL=ignoredups" >> /etc/bash.bashrc;fi
 if ! grep "^export\ HISTFILESIZE=" /etc/bash.bashrc;then echo "export HISTFILESIZE=" >> /etc/bash.bashrc;fi
 if ! grep "^export\ HISTSIZE=" /etc/bash.bashrc;then echo "export HISTSIZE=" >> /etc/bash.bashrc;fi
