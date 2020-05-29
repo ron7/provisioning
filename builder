@@ -70,6 +70,7 @@ if ! grep sites-enabled /etc/nginx/nginx.conf;then line=$((`grep -n "}" /etc/ngi
 maax=$(cat /proc/sys/fs/file-max)
 # use a third of it
 maxopen=$(($maax/3))
+if [ $maxopen -gt 66000 ];then maxopen=66000;fi
 
 cat > /lib/systemd/system/nginx.service <<ENDD
 [Unit]
