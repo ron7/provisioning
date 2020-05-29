@@ -24,14 +24,14 @@ while getopts ":n" o; do
   esac
 done
 shift $((OPTIND-1))
-
+codename=$(lsb_release -sc)
 env
 
 apt purge popularity-contest snapd -yqq
 
 # Add php7.3
-if ! grep -E "^deb http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" /etc/apt/sources.list ;then echo "deb http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" >>  /etc/apt/sources.list ;fi
-if ! grep -E "^deb-src http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" /etc/apt/sources.list ;then echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" >>  /etc/apt/sources.list ;fi
+if ! grep -E "^deb http://ppa.launchpad.net/ondrej/php/ubuntu $codename main" /etc/apt/sources.list ;then echo "deb http://ppa.launchpad.net/ondrej/php/ubuntu $codename main" >>  /etc/apt/sources.list ;fi
+if ! grep -E "^deb-src http://ppa.launchpad.net/ondrej/php/ubuntu $codename main" /etc/apt/sources.list ;then echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu $codename main" >>  /etc/apt/sources.list ;fi
 
 apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4F4EA0AAE5267A6C
 
@@ -44,7 +44,7 @@ PHP_VER=$(dpkg -l|grep php|grep fpm|awk '{print $2}'|sort -n|tail -1|sed "s/php/
 if [ -n "${PHPVER}" ];then
   PHP_VER=${PHPVER}
 elif [ -z $PHP_VER ];then
-  PHP_VER=7.3
+  PHP_VER=7.4
 fi
 
 if [ -n "$BUILD" ];then #nobuild not set for nginx
