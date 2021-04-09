@@ -220,6 +220,23 @@ if ! grep "^PS1='\\\[\\033\[01\;\d\+m\\\]" /etc/skel/.bashrc;then sed -iE "/^uns
 if ! grep "^export\ HISTCONTROL=" /etc/bash.bashrc;then echo "export HISTCONTROL=ignoredups" >> /etc/bash.bashrc;fi
 if ! grep "^export\ HISTFILESIZE=" /etc/bash.bashrc;then echo "export HISTFILESIZE=" >> /etc/bash.bashrc;fi
 if ! grep "^export\ HISTSIZE=" /etc/bash.bashrc;then echo "export HISTSIZE=" >> /etc/bash.bashrc;fi
+if ! grep "^function\ cd\ {" ~/.bashrc;then
+
+cat >> ~/.bashrc <<ENDD
+
+function cd {
+  # builtin cd "\$@" && ls -lah
+  builtin cd "\$@"
+  echo \$(pwd) > /tmp/.\$(id -u).oldpwd
+}
+
+if [ -f /tmp/.\$(id -u).oldpwd ]; then
+  cd \$(cat /tmp/.\$(id -u).oldpwd)
+fi
+
+ENDD
+
+fi
 
 if [ -n "$BUILD" ];then #nobuild not set for nginx
   rm -rf /root/openssl /root/nginx-* /root/incubator-pagespeed-ngx-latest-stable
