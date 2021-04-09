@@ -1,4 +1,6 @@
 #!/bin/bash
+# dpkg-query -W --showformat='${Installed-Size}\t${Package}\n' | sort -nr | less
+
 export LC_ALL=C
 export DEBIAN_FRONTEND=noninteractive
 export APT_LISTCHANGES_FRONTEND=none
