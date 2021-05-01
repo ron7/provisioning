@@ -312,7 +312,7 @@ fi
 locale-gen bg_BG.UTF-8 en_US.UTF-8
 echo LANG=C.UTF-8 > /etc/default/locale
 
-apt update -qq && apt dist-upgrade -yqq && apt autoremove -yqq && dpkg -l|grep ^rc|awk '{print $2}'|xargs apt purge -yqq
+apt update -qq && apt dist-upgrade -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -yqq && apt autoremove -yqq && dpkg -l|grep ^rc|awk '{print $2}'|xargs apt purge -yqq
 
 #DKIM (partial) config
 host=$(hostname -f|awk -F'.' '{gsub("http://|/.*","")} NF>2{$1="";$0=substr($0, 2)}1' OFS='.')
