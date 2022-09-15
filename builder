@@ -95,7 +95,7 @@ WantedBy=multi-user.target
 ENDD
 
 
-apt install -y php${PHP_VER}-cli php${PHP_VER}-common php${PHP_VER}-curl php${PHP_VER}-fpm php${PHP_VER}-gd php${PHP_VER}-intl php${PHP_VER}-json php${PHP_VER}-ldap php${PHP_VER}-mbstring php${PHP_VER}-mysql php${PHP_VER}-opcache php${PHP_VER}-readline php${PHP_VER}-sqlite3 php${PHP_VER}-xml php${PHP_VER}-xmlrpc php${PHP_VER}-zip mariadb-server certbot bash-completion
+apt install -y php${PHP_VER}-cli php${PHP_VER}-common php${PHP_VER}-curl php${PHP_VER}-fpm php${PHP_VER}-gd php${PHP_VER}-intl php${PHP_VER}-ldap php${PHP_VER}-mbstring php${PHP_VER}-mysql php${PHP_VER}-opcache php${PHP_VER}-readline php${PHP_VER}-sqlite3 php${PHP_VER}-xml php${PHP_VER}-xmlrpc php${PHP_VER}-zip php-json mariadb-server certbot bash-completion
 
 # user level limits for open files
 if ! grep "^\*\ soft\ nproc" /etc/security/limits.conf;then echo "* soft nproc $maxopen" >> /etc/security/limits.conf;fi
