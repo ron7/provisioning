@@ -6,7 +6,7 @@ if you DO need the default webmail client:
 
 `ADDMAIL=1 bash <(curl -f -L -sS https://raw.githubusercontent.com/ron7/provisioning/master/builder)`
 
-if you DO need to force PHP 7.3:
+if you DO need to force a PHP version:
 
 `PHPVER=8.1 bash <(curl -f -L -sS https://raw.githubusercontent.com/ron7/provisioning/master/builder)`
 
