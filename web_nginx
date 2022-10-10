@@ -77,8 +77,8 @@ server {
   root $webroot;
 
      ## forcing SSL:
-     ##set \$check_ssl_prot "\${ssl_protocol}P";
-     ##if (\$check_ssl_prot = "P") { rewrite ^   https://\$server_name\$request_uri? permanent; }
+     # set \$check_ssl_prot "\${ssl_protocol}P";
+     # if (\$check_ssl_prot = "P") { rewrite ^   https://\$server_name\$request_uri? permanent; }
 
      ## Enable SSL
 #    listen 443 ssl http2;
@@ -221,8 +221,8 @@ server {
   root /home/$2/dev;
 
      ## forcing SSL:
-     ##set \$check_ssl_prot "\${ssl_protocol}P";
-     ##if (\$check_ssl_prot = "P") { rewrite ^   https://\$server_name\$request_uri? permanent; }
+     # set \$check_ssl_prot "\${ssl_protocol}P";
+     # if (\$check_ssl_prot = "P") { rewrite ^   https://\$server_name\$request_uri? permanent; }
 
      ## Enable SSL
 #    listen 443 ssl http2;
