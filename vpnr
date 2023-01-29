@@ -277,10 +277,10 @@ sed -i '0,/RANDFILE/{s/RANDFILE/#RANDFILE/}' openssl-easyrsa.cnf
   dh dh.pem
   auth SHA512
   tls-auth ta.key 0
-  topology subnet
+  #topology subnet
   server $IPRANGE 255.255.255.0
-  ifconfig-pool-persist ipp.txt" > /etc/openvpn/server.conf
-  echo 'push "redirect-gateway def1 bypass-dhcp"' >> /etc/openvpn/server.conf
+  ifconfig-pool-persist ipp.txt
+  push \"redirect-gateway def1 bypass-dhcp\"" > /etc/openvpn/server.conf
   # DNS
   case $DNS in
     1)
@@ -321,7 +321,23 @@ persist-key
 persist-tun
 status openvpn-status.log
 verb 3
-crl-verify crl.pem" >> /etc/openvpn/server.conf
+crl-verify crl.pem
+
+# to auth via script
+#script-security 2 # must be at least 2
+#auth-user-pass-verify your_script.sh via-file
+#username-as-common-name # without this openvpn will use cn in the certificate as username
+#duplicate-cn # you may need this if everyone is using same certificate
+
+#username-as-common-name # without this openvpn will use cn in the certificate as username
+###duplicate-cn # you may need this if everyone is using same certificate
+#verify-client-cert optional
+###client-to-client
+
+# https://nerddrivel.com/2020/06/15/openvpn-server-on-centos7-with-active-directory-authentication/
+#username-as-common-name
+##plugin /usr/lib/openvpn/openvpn-auth-ldap.so /etc/openvpn/auth.activedirectory.conf4
+" >> /etc/openvpn/server.conf
 # Enable net.ipv4.ip_forward for the system
 echo 'net.ipv4.ip_forward=1' > /etc/sysctl.d/30-openvpn-forward.conf
 # Enable without waiting for a reboot or service restart
