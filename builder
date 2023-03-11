@@ -43,11 +43,8 @@ apt update -qq
 
 
 PHP_VER=$(dpkg -l|grep php|grep fpm|awk '{print $2}'|sort -n|tail -1|sed "s/php//; s/-fpm//")
-if [ -n "${PHPVER}" ];then
-  PHP_VER=${PHPVER}
-elif [ -z $PHP_VER ];then
-  PHP_VER=8.1
-fi
+PHP_VER=${PHP_VER:-8.2}
+PHP_VER=${PHPVER:-$PHP_VER} #if we have set PHPVER via ENV we use that, else we use the value of PHP_VER
 
 if [ -n "$BUILD" ];then #nobuild not set for nginx
   installnginx=
