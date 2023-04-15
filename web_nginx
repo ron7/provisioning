@@ -57,6 +57,7 @@ elif [ -n "$2" ]; then
     chmod 751 $webroot /home/$2/dev
     chown -R $2.$2 /home/$2/*
   fi
+  chmod 751 "/home/$2"
 
 
   id=`id $2 -u`
