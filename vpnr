@@ -315,6 +315,7 @@ sed -i '0,/RANDFILE/{s/RANDFILE/#RANDFILE/}' openssl-easyrsa.cnf
 esac
 echo "keepalive 10 120
 cipher AES-256-CBC
+data-ciphers AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305:AES-256-CBC
 user nobody
 group $GROUPNAME
 persist-key
