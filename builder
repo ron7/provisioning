@@ -39,11 +39,27 @@ apt purge popularity-contest snapd -yqq
 
 if ! grep -E "^kexalgorithms" /etc/ssh/sshd_config;then echo -e "#Strenghten ssh:\nmacs umac-128-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,umac-128@openssh.com,hmac-sha2-256,hmac-sha2-512\nkexalgorithms curve25519-sha256,curve25519-sha256@libssh.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group-exchange-sha256" >> /etc/ssh/sshd_config && service ssh reload;fi
 
+
+## enable nginx mainline:
+apt install software-properties-common
+apt install curl gnupg2 ca-certificates lsb-release dirmngr software-properties-common apt-transport-https -y
+#cp -pr /etc/nginx /etc/bak_nginx_before_mainline
+curl -fSsL https://nginx.org/keys/nginx_signing.key | sudo gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null
+#gpg --dry-run --quiet --import --import-options import-show /usr/share/keyrings/nginx-archive-keyring.gpg
+echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/mainline/ubuntu `lsb_release -cs` nginx" | sudo tee /etc/apt/sources.list.d/nginx.list
+echo -e "Package: *\nPin: origin nginx.org\nPin: release o=nginx\nPin-Priority: 900\n" | sudo tee /etc/apt/preferences.d/99nginx
+#apt update -qq
+#apt list --upgradable
+#apt dist-upgrade
+
+# then https://nginx.org/en/docs/quic.html
+
+
 apt update -qq
 
 
 PHP_VER=$(dpkg -l|grep php|grep fpm|awk '{print $2}'|sort -n|tail -1|sed "s/php//; s/-fpm//")
-PHP_VER=${PHP_VER:-8.1}
+PHP_VER=${PHP_VER:-8.4}
 PHP_VER=${PHPVER:-$PHP_VER} #if we have set PHPVER via ENV we use that, else we use the value of PHP_VER
 
 if [ -n "$BUILD" ];then #nobuild not set for nginx
@@ -51,6 +67,7 @@ if [ -n "$BUILD" ];then #nobuild not set for nginx
 else
   installnginx=nginx
 fi
+
 apt install -y curl git vim opendkim opendkim-tools postfix $installnginx
 
 if [ -n "$BUILD" ];then
