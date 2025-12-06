@@ -74,7 +74,8 @@ server {
 server {
     listen 80;
     server_name $1;
-    return 301 https://\$host\$request_uri;
+    #return 301 https://\$host\$request_uri;
+    if (\$scheme != "https") { return 301 https://\$host\$request_uri; }
 }
 server {
 
@@ -226,7 +227,8 @@ add_header X-XSS-Protection "1; mode=block";
 server {
     listen 80;
     server_name dev.$1;
-    return 301 https://\$host\$request_uri;
+    #return 301 https://\$host\$request_uri;
+    if (\$scheme != "https") { return 301 https://\$host\$request_uri; }
 }
 server {
   server_name dev.$1;
@@ -246,7 +248,7 @@ server {
 #    ssl_prefer_server_ciphers on;
 #    ssl_ciphers "EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH";
 #    ssl_ecdh_curve secp384r1;
-#    ssl_session_tickets on;
+#    ssl_session_tickets off;
 #    ssl_stapling on;
 #    ssl_stapling_verify on;
 #    resolver 1.1.1.1 8.8.8.8 valid=300s;
