@@ -72,8 +72,12 @@ server {
     rewrite ^(.*) http://$1\$1 permanent;
   }
 server {
+    listen 80;
+    server_name $1;
+    return 301 https://\$host\$request_uri;
+}
+server {
 
-  listen 80;
   server_name $1;
   root $webroot;
 
@@ -81,19 +85,22 @@ server {
      # set \$check_ssl_prot "\${ssl_protocol}P";
      # if (\$check_ssl_prot = "P") { rewrite ^   https://\$server_name\$request_uri? permanent; }
 
-     ## Enable SSL
-#    listen 443 ssl http2;
+#    listen 443 ssl;
+#    ### listen 443 quic reuseport; ### this line should be enabled only ONCE per ip:port, despite how many server {} are on that ip:port
+#    http2 on;
+#    add_header Alt-Svc 'h3=":\$server_port"; ma=86400'; ### this line should be enabled only ONCE per ip:port, despite how many server {} are on that ip:port
 #    ssl_certificate /home/$2/$1.pem;
 #    ssl_certificate_key /home/$2/$1.key;
+
 #    ssl_session_cache shared:SSL:1m;
 #    ssl_session_timeout  10m;
 #    ssl_protocols TLSv1.2 TLSv1.3;
 #    ssl_prefer_server_ciphers on;
 #    ssl_ciphers "EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH";
 #    ssl_ecdh_curve secp384r1;
-#    ssl_session_tickets on;
-#    ssl_stapling on;
-#    ssl_stapling_verify on;
+#    ssl_session_tickets off;
+#    #ssl_stapling on;
+#    #ssl_stapling_verify on;
 #    resolver 1.1.1.1 8.8.8.8 valid=300s;
 #    resolver_timeout 5s;
 
@@ -217,7 +224,11 @@ add_header X-XSS-Protection "1; mode=block";
 
 ### Dev subdomain:
 server {
-  listen 80;
+    listen 80;
+    server_name dev.$1;
+    return 301 https://\$host\$request_uri;
+}
+server {
   server_name dev.$1;
   root /home/$2/dev;
 
