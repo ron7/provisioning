@@ -8,10 +8,97 @@ green="\e[1;32m"
 yellow="\e[1;33m"
 pink="\e[1;35m"
 me=$(basename "$0")
+script_path="$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")"
+update_url="https://raw.githubusercontent.com/ron7/provisioning/refs/heads/master/db"
 
 # Generate a random password
 #  $1 = number of characters; defaults to 32
 #  $2 = include special characters; 1 = yes, 0 = no; defaults to 1
+
+function check_and_update() {
+  local verbose="$1"
+  local tmp_file="/tmp/db.$$"
+  local backup_file="/tmp/db.backup.$$"
+  
+  # Check if file is older than 2 days (172800 seconds) - skip if verbose mode (manual upgrade)
+  if [ "$verbose" != "1" ]; then
+    if [ -f "$script_path" ]; then
+      local file_age=$(($(date +%s) - $(stat -c %Y "$script_path" 2>/dev/null || stat -f %m "$script_path" 2>/dev/null || echo 0)))
+      if [ "$file_age" -lt 172800 ]; then
+        return 0
+      fi
+    fi
+  fi
+  
+  [ "$verbose" = "1" ] && echo -e "${yellow}Checking for updates...${nc}"
+  [ "$verbose" = "1" ] && echo -e "${gray}Downloading from: $update_url${nc}"
+  
+  # Check connectivity and download
+  if [ "$verbose" = "1" ]; then
+    if ! curl -sf --max-time 10 "$update_url" > "$tmp_file"; then
+      echo -e "${red}Failed to download update (no connectivity or server error).${nc}"
+      rm -f "$tmp_file" 2>/dev/null
+      return 1
+    fi
+  else
+    if ! curl -sf --max-time 10 "$update_url" > "$tmp_file" 2>/dev/null; then
+      rm -f "$tmp_file" 2>/dev/null
+      return 1
+    fi
+  fi
+  
+  # Check if download is valid (non-empty and looks like a bash script)
+  [ "$verbose" = "1" ] && echo -e "${gray}Validating downloaded file...${nc}"
+  if [ ! -s "$tmp_file" ] || ! head -n 1 "$tmp_file" | grep -q "#!/usr/bin/env bash"; then
+    [ "$verbose" = "1" ] && echo -e "${red}Downloaded file appears invalid.${nc}"
+    rm -f "$tmp_file" 2>/dev/null
+    return 1
+  fi
+
+  # Safety check: Ensure downloaded version supports the upgrade flag to prevent downgrading
+  if ! grep -q "upgrade_script" "$tmp_file"; then
+    [ "$verbose" = "1" ] && echo -e "${red}Downloaded version is older/incompatible (missing upgrade support). Aborting to prevent downgrade.${nc}"
+    rm -f "$tmp_file" 2>/dev/null
+    return 1
+  fi
+  
+  # Compare files
+  [ "$verbose" = "1" ] && echo -e "${gray}Comparing with current version...${nc}"
+  if cmp -s "$script_path" "$tmp_file" 2>/dev/null; then
+    if [ "$verbose" = "1" ]; then
+      echo -e "${green}Remote version matches local version.${nc}"
+      echo -e "${yellow}Forcing reinstall since -g was used...${nc}"
+    else
+      # Silent mode: if same, do nothing
+      rm -f "$tmp_file" 2>/dev/null
+      return 0
+    fi
+  fi
+  
+  [ "$verbose" = "1" ] && echo -e "${yellow}New version found. Updating...${nc}"
+  
+  # Backup current file
+  [ "$verbose" = "1" ] && echo -e "${gray}Creating backup...${nc}"
+  cp "$script_path" "$backup_file" 2>/dev/null || {
+    [ "$verbose" = "1" ] && echo -e "${red}Failed to create backup.${nc}"
+    rm -f "$tmp_file" 2>/dev/null
+    return 1
+  }
+  
+  # Try to update
+  [ "$verbose" = "1" ] && echo -e "${gray}Installing new version...${nc}"
+  if cp "$tmp_file" "$script_path" 2>/dev/null && chmod +x "$script_path" 2>/dev/null; then
+    [ "$verbose" = "1" ] && echo -e "${green}Update successful!${nc}"
+    rm -f "$tmp_file" "$backup_file" 2>/dev/null
+    return 0
+  else
+    # Restore backup on failure
+    [ "$verbose" = "1" ] && echo -e "${red}Update failed. Restoring backup...${nc}"
+    cp "$backup_file" "$script_path" 2>/dev/null
+    rm -f "$tmp_file" "$backup_file" 2>/dev/null
+    return 1
+  fi
+}
 
 function usage {
   echo -e "
@@ -25,6 +112,7 @@ function usage {
   -h = ${yellow}FLAG${nc} show this help message
   -l = ${yellow}FLAG${nc} list databases
   -L = ${yellow}FLAG${nc} list databases extended with users with permissions per DB
+  -g = ${yellow}FLAG${nc} upgrade script from GitHub (shows process)
   -c = DB to create
   -u = DBUser to create
   -p = DBUser password to set
@@ -36,7 +124,10 @@ function usage {
   exit 0
 }
 
-while getopts ":D:U:c:u:p:H:hlLx" flag
+# Silent auto-update check (only if file hasn't been modified in 2+ days)
+check_and_update 0 2>/dev/null
+
+while getopts ":D:U:c:u:p:H:hlLgx" flag
 do
   case "${flag}" in
     D) delete_db="${OPTARG}";;
@@ -48,14 +139,26 @@ do
     h) usage;;
     l) list_dbs=1;;
     L) list_dbs_extended=1;;
+    g) upgrade_script=1;;
     x) set -x;;
     :) echo "Error: -${OPTARG} requires an argument." && exit 1;;
     *) usage;;
   esac
 done
 
+# Handle manual upgrade
+if [ -n "$upgrade_script" ]; then
+  if check_and_update 1; then
+    echo -e "${green}Upgrade completed successfully.${nc}"
+    exit 0
+  else
+    echo -e "${red}Upgrade failed.${nc}"
+    exit 1
+  fi
+fi
+
 # Check if any option was provided
-if [ -z "$list_dbs" ] && [ -z "$list_dbs_extended" ] && [ -z "$create_db" ] && [ -z "$delete_db" ] && [ -z "$delete_user" ]; then
+if [ -z "$list_dbs" ] && [ -z "$list_dbs_extended" ] && [ -z "$create_db" ] && [ -z "$delete_db" ] && [ -z "$delete_user" ] && [ -z "$upgrade_script" ]; then
   usage
 fi
 
