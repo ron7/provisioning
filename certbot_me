@@ -6,22 +6,11 @@ if [[ $2 == "" ]];then
 else
   cd=`pwd`
   firstdomain=`echo $1|cut -d, -f1`
-  if [[ $3 != "" ]];then
-    wr=$3
-  elif [[ -d "/home/$2/websites/$firstdomain/www" ]];then
-    wr="/home/$2/websites/$firstdomain/www"
-  elif [[ -d "/home/$2/www" ]];then
-    wr="/home/$2/www/"
-  else
-    wr=""
-  fi
   san=`echo $1|sed "s/,/ -d /g"`
-  if [[ $4 == "nginx" ]];then
+  if [[ $4 == "nginx" ]] || [[ $3 == "" ]];then
     webroot_args="--nginx"
-  elif [[ $wr != "" ]];then
-    webroot_args="--webroot -w $wr"
   else
-    webroot_args="--nginx"
+    webroot_args="--webroot -w $3"
   fi
   certbot certonly --agree-tos --expand -d $1 --cert-path /home/$2/$firstdomain.crt --fullchain-path /home/$2/$firstdomain.pem --chain-path /home/$2/$firstdomain.crt.ca $webroot_args --email ron@xron.net --cert-name $firstdomain --reinstall --rsa-key-size 4096 -nq
   if [ $? == "0" ];then
