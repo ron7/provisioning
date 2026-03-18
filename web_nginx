@@ -104,6 +104,7 @@ if [ "${1:-}" == "-d" ]; then
     user=$3
     logger "Disabling domain symlink in Nginx: ${2:-}"
     rm -rf /etc/nginx/sites-enabled/"${2:-}".conf
+    rm -rf /etc/nginx/sites-available/"${2:-}".conf
     logger "Removing from PHP pool"
     rm -rf /etc/php/${PHP_VER}/fpm/pool.d/"$user".conf
     servicesReload -q
