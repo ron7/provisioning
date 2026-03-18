@@ -148,13 +148,13 @@ elif [ -n "${2:-}" ]; then
     chown -R "$2":"$2" "$webroot"
   else
     # Domain-namespaced subdirectory so one user can host multiple domains
-    webroot=/home/$2/$1/www
-    mkdir -p /home/"$2"/"$1"/www
-    mkdir -p /home/"$2"/"$1"/dev
-    touch /home/"$2"/"$1"/www/index.php
-    touch /home/"$2"/"$1"/dev/index.php
-    chmod 751 "$webroot" /home/"$2"/"$1"/dev
-    chown -R "$2":"$2" /home/"$2"/"$1"
+    webroot=/home/$2/websites/$1/www
+    mkdir -p /home/"$2"/websites/"$1"/www
+    mkdir -p /home/"$2"/websites/"$1"/dev
+    touch /home/"$2"/websites/"$1"/www/index.php
+    touch /home/"$2"/websites/"$1"/dev/index.php
+    chmod 751 "$webroot" /home/"$2"/websites/"$1"/dev
+    chown -R "$2":"$2" /home/"$2"/websites/"$1"
   fi
   chmod 751 "/home/$2"
 
@@ -340,7 +340,7 @@ server {
 }
 server {
   server_name dev.$1;
-  root /home/$2/$1/dev;
+  root /home/$2/websites/$1/dev;
   server_tokens off;
   client_max_body_size 64m;
 
