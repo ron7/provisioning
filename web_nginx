@@ -105,13 +105,20 @@ if [ "${1:-}" == "-d" ]; then
     logger "Disabling domain symlink in Nginx: ${2:-}"
     rm -rf /etc/nginx/sites-enabled/"${2:-}".conf
     rm -rf /etc/nginx/sites-available/"${2:-}".conf
-    logger "Removing from PHP pool"
-    rm -rf /etc/php/${PHP_VER}/fpm/pool.d/"$user".conf
-    servicesReload -q
-    logger "Deleting user [and group]: $user"
-    userdel -f "$user" 2>/dev/null || true
-    groupdel "$user" 2>/dev/null || true
-    echo ":: home folder can be purged via: rm -rf /home/$user"
+    # Only remove user, group, and FPM pool if no other sites still use this user
+    remaining=$(grep -rl "php-fpm_${user}\.sock" /etc/nginx/sites-enabled/ 2>/dev/null | wc -l)
+    if [ "$remaining" -eq 0 ]; then
+      logger "No remaining sites for '$user' — removing PHP-FPM pool and user"
+      rm -rf /etc/php/${PHP_VER}/fpm/pool.d/"$user".conf
+      servicesReload -q
+      logger "Deleting user [and group]: $user"
+      userdel -f "$user" 2>/dev/null || true
+      groupdel "$user" 2>/dev/null || true
+      echo ":: home folder can be purged via: rm -rf /home/$user"
+    else
+      servicesReload -q
+      echo ":: User '$user' still has $remaining other site(s) — user, group, and FPM pool kept"
+    fi
   else
     echo "Usage: $0 -d domain.com user"
   fi
@@ -126,19 +133,28 @@ elif [ -n "${2:-}" ]; then
     exit 1
   fi
 
-  groupadd -f "$2"
-  useradd -s /bin/false -d /home/"$2" -m -g "$2" "$2"
+  # Create user/group only if they don't already exist
+  user_exists=0
+  if id "$2" &>/dev/null; then
+    user_exists=1
+    echo ":: User '$2' already exists — reusing"
+  else
+    groupadd -f "$2"
+    useradd -s /bin/false -d /home/"$2" -m -g "$2" "$2"
+  fi
+
   if [ "${3:-}" != "" ]; then
     webroot=$3
     chown -R "$2":"$2" "$webroot"
   else
-    webroot=/home/$2/www
-    mkdir -p /home/"$2"/www
-    mkdir -p /home/"$2"/dev
-    touch /home/"$2"/www/index.php
-    touch /home/"$2"/dev/index.php
-    chmod 751 "$webroot" /home/"$2"/dev
-    chown -R "$2":"$2" /home/"$2"/*
+    # Domain-namespaced subdirectory so one user can host multiple domains
+    webroot=/home/$2/$1/www
+    mkdir -p /home/"$2"/"$1"/www
+    mkdir -p /home/"$2"/"$1"/dev
+    touch /home/"$2"/"$1"/www/index.php
+    touch /home/"$2"/"$1"/dev/index.php
+    chmod 751 "$webroot" /home/"$2"/"$1"/dev
+    chown -R "$2":"$2" /home/"$2"/"$1"
   fi
   chmod 751 "/home/$2"
 
@@ -324,7 +340,7 @@ server {
 }
 server {
   server_name dev.$1;
-  root /home/$2/dev;
+  root /home/$2/$1/dev;
   server_tokens off;
   client_max_body_size 64m;
 
@@ -553,9 +569,12 @@ logger "Creating Nginx links"
 cd /etc/nginx/sites-enabled/
 ln -fs ../sites-available/"$1".conf "$1".conf
 cd "$currentpath"
-logger "Adding pool to php-fpm"
-mkdir -p /etc/php/${PHP_VER}/fpm/pool.d/
-cat > /etc/php/${PHP_VER}/fpm/pool.d/"$2".conf <<ENDD
+if [ "$user_exists" -eq 1 ] && [ -f "/etc/php/${PHP_VER}/fpm/pool.d/$2.conf" ]; then
+  logger "PHP-FPM pool for '$2' already exists — reusing"
+else
+  logger "Adding pool to php-fpm"
+  mkdir -p /etc/php/${PHP_VER}/fpm/pool.d/
+  cat > /etc/php/${PHP_VER}/fpm/pool.d/"$2".conf <<ENDD
 [$2]
 listen.owner = $2
 listen.group = $2
@@ -576,6 +595,7 @@ php_admin_flag[log_errors] = on
 slowlog = /var/log/php-fpm_$2_slow.log
 request_slowlog_timeout = 10s
 ENDD
+fi
 if ! grep -q "SCRIPT_FILENAME" /etc/nginx/fastcgi_params; then
   sed -i '/SCRIPT_NAME/i fastcgi_param  SCRIPT_FILENAME    \$document_root\$fastcgi_script_name;' /etc/nginx/fastcgi_params
 fi
