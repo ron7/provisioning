@@ -2,7 +2,7 @@
 if ! certbot --version 2>/dev/null;then echo -e "\n::: certbot missing\n";apt install certbot;fi
 
 if [[ $2 == "" ]];then
-  echo :: Usage: $0 domain.com username \[webroot\]
+  echo :: Usage: $0 domain.com username \[webroot\] \[nginx\]
 else
   cd=`pwd`
   firstdomain=`echo $1|cut -d, -f1`
@@ -10,11 +10,20 @@ else
     wr=$3
   elif [[ -d "/home/$2/websites/$firstdomain/www" ]];then
     wr="/home/$2/websites/$firstdomain/www"
-  else
+  elif [[ -d "/home/$2/www" ]];then
     wr="/home/$2/www/"
+  else
+    wr=""
   fi
   san=`echo $1|sed "s/,/ -d /g"`
-  certbot certonly --agree-tos --expand -d $1 --cert-path /home/$2/$firstdomain.crt --fullchain-path /home/$2/$firstdomain.pem --chain-path /home/$2/$firstdomain.crt.ca --webroot --email ron@xron.net -w $wr --cert-name $firstdomain --reinstall --rsa-key-size 4096 -nq
+  if [[ $4 == "nginx" ]];then
+    webroot_args="--nginx"
+  elif [[ $wr != "" ]];then
+    webroot_args="--webroot -w $wr"
+  else
+    webroot_args="--nginx"
+  fi
+  certbot certonly --agree-tos --expand -d $1 --cert-path /home/$2/$firstdomain.crt --fullchain-path /home/$2/$firstdomain.pem --chain-path /home/$2/$firstdomain.crt.ca $webroot_args --email ron@xron.net --cert-name $firstdomain --reinstall --rsa-key-size 4096 -nq
   if [ $? == "0" ];then
     echo :: done issuing SSL
     if [[ "`openssl x509 -noout -modulus -in /etc/letsencrypt/live/$firstdomain/cert.pem| openssl md5|awk '{print $2}'`" == "`openssl rsa -noout -modulus -in /etc/letsencrypt/live/$firstdomain/privkey.pem| openssl md5|awk '{print $2}'`" ]];then
