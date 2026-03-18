@@ -5,13 +5,14 @@ if [[ $2 == "" ]];then
   echo :: Usage: $0 domain.com username \[webroot\]
 else
   cd=`pwd`
+  firstdomain=`echo $1|cut -d, -f1`
   if [[ $3 != "" ]];then
     wr=$3
+  elif [[ -d "/home/$2/websites/$firstdomain/www" ]];then
+    wr="/home/$2/websites/$firstdomain/www"
   else
     wr="/home/$2/www/"
   fi
-
-  firstdomain=`echo $1|cut -d, -f1`
   san=`echo $1|sed "s/,/ -d /g"`
   certbot certonly --agree-tos --expand -d $1 --cert-path /home/$2/$firstdomain.crt --fullchain-path /home/$2/$firstdomain.pem --chain-path /home/$2/$firstdomain.crt.ca --webroot --email ron@xron.net -w $wr --cert-name $firstdomain --reinstall --rsa-key-size 4096 -nq
   if [ $? == "0" ];then
