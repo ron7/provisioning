@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # options:
 quiet=1
 
-# env:
-PHP_VER=$(dpkg -l|grep php|grep fpm|awk '{print $2}'|sort -n|tail -1|sed "s/php//; s/-fpm//")
-if [ -z $PHP_VER ];then
+varnish=0
+[[ "${*}" =~ "-v" ]] && varnish=1
+
+PHP_VER=$(dpkg -l 2>/dev/null | grep php | grep fpm | awk '{print $2}' | sort -n | tail -1 | sed "s/php//; s/-fpm//") || true
+if [ -z "${PHP_VER:-}" ]; then
   PHP_VER=7.4
 fi
-
-if ! nginx -v 2>/dev/null;then echo -e "\n::: nginx missing, aborting\n\n";exit 1;fi
-if ! php-fpm${PHP_VER} -v 1>/dev/null;then echo -e "\n::: php missing, aborting\n\n";exit 1;fi
 
 function servicesReload {
   if [ "$1" != "-q" ]; then
@@ -21,58 +21,139 @@ function servicesReload {
   service php${PHP_VER}-fpm reload
 }
 function logger {
-  if [ "$quiet" == "1" ] ;then
+  if [ "$quiet" == "1" ]; then
     echo -n ''
   else
     echo -e "$1"
   fi
 }
-if [ "$1" == "-d" ]; then
-  if [ "$3" != "" ] ; then
+
+validate_inputs() {
+  [[ "$1" =~ ^[a-zA-Z0-9._-]+\.[a-zA-Z]{2,}$ ]] || { echo "Invalid domain: $1"; exit 1; }
+  [[ "$2" =~ ^[a-z_][a-z0-9_-]*$ ]]            || { echo "Invalid username: $2"; exit 1; }
+}
+
+if [ "${1:-}" == "-h" ] || [ "${1:-}" == "--help" ] || [ -z "${1:-}" ]; then
+  cat <<EOF
+
+USAGE
+  web_nginx [OPTIONS] domain.com username [webroot]
+  web_nginx -d domain.com username
+  web_nginx -l
+  web_nginx -h
+
+DESCRIPTION
+  Provisions a domain with an nginx vhost and a dedicated PHP-FPM pool.
+  Creates a system user and group matching the given username, sets up
+  webroot directories, and symlinks the nginx config into sites-enabled.
+
+COMMANDS
+  domain.com username [webroot]
+      Create a new vhost + PHP-FPM pool for domain.com owned by username.
+      If webroot is omitted, /home/username/www is created and used.
+      A dev.domain.com vhost is also created pointing to /home/username/dev.
+
+  -d domain.com username
+      Delete the nginx config, PHP-FPM pool, and system user for the given
+      domain/username pair. Services are reloaded automatically.
+      The home directory is NOT removed; run:
+        rm -rf /home/username
+
+  -l  List all currently enabled vhosts (sites-enabled).
+
+  -h, --help
+      Show this help.
+
+OPTIONS
+  -v  Also write a Varnish VCL config (/etc/varnish/default.vcl).
+      Requires varnishd to be installed.
+
+FILES CREATED
+  /etc/nginx/sites-available/domain.com.conf   nginx server blocks
+  /etc/nginx/sites-enabled/domain.com.conf     symlink to the above
+  /etc/php/<ver>/fpm/pool.d/username.conf      PHP-FPM pool
+  /var/run/php-fpm_username.sock               FPM socket (runtime)
+  /var/log/php-fpm_username.log                PHP error log
+  /var/log/php-fpm_username_slow.log           PHP slow log (>10s)
+  /var/log/nginx/domain.com_access.log         nginx access log
+  /var/log/nginx/domain.com_error.log          nginx error log
+
+SSL
+  SSL is pre-wired in the config but commented out. To enable:
+    1. Obtain certificates (e.g. via certbot) — place .pem and .key
+       under /home/username/.
+    2. Uncomment the listen 443 ssl / listen [::]:443 ssl lines and
+       ssl_certificate directives in the nginx config.
+    3. Uncomment add_header Strict-Transport-Security once SSL is stable.
+    4. Run: nginx -t && service nginx reload
+
+NOTES
+  - Requires root / sudo.
+  - Detected PHP-FPM version: ${PHP_VER}
+  - To override, set PHP_VER before calling: PHP_VER=8.2 web_nginx ...
+
+EOF
+  exit 0
+fi
+
+if ! nginx -v 2>/dev/null; then echo -e "\n::: nginx missing, aborting\n\n"; exit 1; fi
+if ! php-fpm${PHP_VER} -v 1>/dev/null; then echo -e "\n::: php missing, aborting\n\n"; exit 1; fi
+
+if [ "${1:-}" == "-d" ]; then
+  if [ "${3:-}" != "" ]; then
     user=$3
-    logger "Disabling domain symlink in Nginx: $2"
-    rm -rf /etc/nginx/sites-enabled/$2.conf
+    logger "Disabling domain symlink in Nginx: ${2:-}"
+    rm -rf /etc/nginx/sites-enabled/"${2:-}".conf
     logger "Removing from PHP pool"
-    rm -rf /etc/php/${PHP_VER}/fpm/pool.d/$user.conf
+    rm -rf /etc/php/${PHP_VER}/fpm/pool.d/"$user".conf
     servicesReload -q
     logger "Deleting user [and group]: $user"
-    userdel -f $user 2>/dev/null
+    userdel -f "$user" 2>/dev/null || true
+    groupdel "$user" 2>/dev/null || true
     echo ":: home folder can be purged via: rm -rf /home/$user"
   else
-    echo Usage: $0 -d domain.com user
+    echo "Usage: $0 -d domain.com user"
   fi
-elif [ -n "$2" ]; then
-  currentpath=`pwd`
-  groupadd -f $2
-  useradd -s /bin/false -d /home/$2 -m -g $2 $2
-  if [ "$3" != "" ];then
+elif [ "${1:-}" == "-l" ]; then
+  ls /etc/nginx/sites-enabled/*.conf 2>/dev/null | sed 's|.*/||; s|\.conf||' || true
+elif [ -n "${2:-}" ]; then
+  validate_inputs "$1" "$2"
+  currentpath=$(pwd)
+  if [[ -f /etc/nginx/sites-available/"$1".conf ]]; then
+    echo ":: Config already exists: /etc/nginx/sites-available/$1.conf"
+    echo "   Use -d $1 $2 first, or edit the file manually."
+    exit 1
+  fi
+
+  groupadd -f "$2"
+  useradd -s /bin/false -d /home/"$2" -m -g "$2" "$2"
+  if [ "${3:-}" != "" ]; then
     webroot=$3
-    chown -R $2.$2 $webroot
+    chown -R "$2"."$2" "$webroot"
   else
     webroot=/home/$2/www
-    mkdir -p /home/$2/www
-    mkdir -p /home/$2/dev
-    touch /home/$2/www/index.php
-    touch /home/$2/dev/index.php
-    chmod 751 $webroot /home/$2/dev
-    chown -R $2.$2 /home/$2/*
+    mkdir -p /home/"$2"/www
+    mkdir -p /home/"$2"/dev
+    touch /home/"$2"/www/index.php
+    touch /home/"$2"/dev/index.php
+    chmod 751 "$webroot" /home/"$2"/dev
+    chown -R "$2"."$2" /home/"$2"/*
   fi
   chmod 751 "/home/$2"
 
-
-  id=`id $2 -u`
-  mkdir -p /etc/nginx/sites-enabled/;mkdir -p /etc/nginx/sites-available/
+  mkdir -p /etc/nginx/sites-enabled/; mkdir -p /etc/nginx/sites-available/
   logger "Creating Nginx config file: /etc/nginx/sites-available/$1.conf"
-  echo webroot: $webroot
-  cat > /etc/nginx/sites-available/$1.conf <<ENDD
+  echo "webroot: $webroot"
+  cat > /etc/nginx/sites-available/"$1".conf <<ENDD
 #limit_req_zone \$binary_remote_addr zone=one:10m rate=20r/m;
 #limit_rate 300K; limit_conn_zone \$binary_remote_addr zone=two:4m;
 server {
     server_name  www.$1;
-    rewrite ^(.*) http://$1\$1 permanent;
+    rewrite ^(.*) https://$1\$1 permanent;
   }
 server {
     listen 80;
+    listen [::]:80;
     server_name $1;
     #return 301 https://\$host\$request_uri;
     if (\$scheme != "https") { return 301 https://\$host\$request_uri; }
@@ -81,12 +162,21 @@ server {
 
   server_name $1;
   root $webroot;
+  server_tokens off;
+  client_max_body_size 64m;
+
+  gzip on;
+  gzip_vary on;
+  gzip_proxied any;
+  gzip_comp_level 6;
+  gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml;
 
      ## forcing SSL:
      # set \$check_ssl_prot "\${ssl_protocol}P";
      # if (\$check_ssl_prot = "P") { rewrite ^   https://\$server_name\$request_uri? permanent; }
 
 #    listen 443 ssl;
+#    listen [::]:443 ssl;
 #    ### listen 443 quic reuseport; ### this line should be enabled only ONCE per ip:port, despite how many server {} are on that ip:port
 #    http2 on;
 #    add_header Alt-Svc 'h3=":\$server_port"; ma=86400'; ### this line should be enabled only ONCE per ip:port, despite how many server {} are on that ip:port
@@ -120,7 +210,7 @@ add_header X-Content-Security-Policy "default-src 'self' data: 'unsafe-inline' '
 add_header X-WebKit-CSP "default-src 'self' data: 'unsafe-inline' 'unsafe-hashes' 'unsafe-eval' https://*.googleapis.com https://www.google-analytics.com https://*.google.com; script-src 'self' data: 'unsafe-inline' 'unsafe-hashes' 'unsafe-eval' https://*.$1 https://$1 https://*.googleapis.com https://google.com https://www.google-analytics.com https://*.google.com https://*.gstatic.com; style-src * 'self' data: 'unsafe-inline' 'unsafe-hashes' https://*.googleapis.com https://www.google-analytics.com https://*.google.com; img-src * 'self' data: https://*.googleapis.com https://www.google-analytics.com https://*.google.com; font-src * 'self' data:; media-src * 'self' https://*.googleapis.com https://www.google-analytics.com https://*.google.com; object-src 'self' data:; prefetch-src 'self'; frame-src * data:; frame-ancestors 'self'; form-action *";
 
 #HSTS
-#add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload";
+#add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload"; # Uncomment once SSL is live
 
 # https://infosec.mozilla.org/guidelines/web_security#x-content-type-options
 add_header X-Content-Type-Options "nosniff";
@@ -153,7 +243,7 @@ add_header X-XSS-Protection "1; mode=block";
 #  # Deny access to any files with a .php extension in the uploads directory. Works in sub-directory installs and also in multisite network
 #  location ~* ^/(?:uploads|files|wp-content|wp-includes)/.*\\.php\\$ { deny all; }
 #
-#  # Deny access to uploads that aren’t images, videos, music, etc.
+#  # Deny access to uploads that aren't images, videos, music, etc.
 #  location ~* ^/wp-content/uploads/.*.(html|htm|shtml|php|js|swf|css)$ { deny all; }
 
     location = /favicon.ico { try_files /favicon.ico =204; access_log off; log_not_found off; expires max; }
@@ -226,6 +316,7 @@ add_header X-XSS-Protection "1; mode=block";
 ### Dev subdomain:
 server {
     listen 80;
+    listen [::]:80;
     server_name dev.$1;
     #return 301 https://\$host\$request_uri;
     if (\$scheme != "https") { return 301 https://\$host\$request_uri; }
@@ -233,13 +324,17 @@ server {
 server {
   server_name dev.$1;
   root /home/$2/dev;
+  server_tokens off;
+  client_max_body_size 64m;
 
      ## forcing SSL:
      # set \$check_ssl_prot "\${ssl_protocol}P";
      # if (\$check_ssl_prot = "P") { rewrite ^   https://\$server_name\$request_uri? permanent; }
 
      ## Enable SSL
-#    listen 443 ssl http2;
+#    listen 443 ssl;
+#    listen [::]:443 ssl;
+#    http2 on;
 #    ssl_certificate /home/$2/dev.$1.pem;
 #    ssl_certificate_key /home/$2/dev.$1.key;
 #    ssl_session_cache shared:SSL:1m;
@@ -258,6 +353,7 @@ server {
   error_log /var/log/nginx/dev.$1_error.log;
   index index.php index.html;
   include include_standard_errors.conf;
+  add_header X-Robots-Tag "noindex, nofollow";
 
   if (\$request_method !~ ^(GET|HEAD|POST|PUT|PATCH|DELETE)$ ) { return 444;  }
 
@@ -267,7 +363,7 @@ add_header X-Content-Security-Policy "default-src 'self' data: 'unsafe-inline' '
 add_header X-WebKit-CSP "default-src 'self' data: 'unsafe-inline' 'unsafe-hashes' 'unsafe-eval' https://*.googleapis.com https://www.google-analytics.com https://*.google.com; script-src 'self' data: 'unsafe-inline' 'unsafe-hashes' 'unsafe-eval' https://*.$1 https://$1 https://*.googleapis.com https://google.com https://www.google-analytics.com https://*.google.com https://*.gstatic.com; style-src * 'self' data: 'unsafe-inline' 'unsafe-hashes' https://*.googleapis.com https://www.google-analytics.com https://*.google.com; img-src * 'self' data: https://*.googleapis.com https://www.google-analytics.com https://*.google.com; font-src * 'self' data:; media-src * 'self' https://*.googleapis.com https://www.google-analytics.com https://*.google.com; object-src 'self' data:; prefetch-src 'self'; frame-src * data:; frame-ancestors 'self'; form-action *";
 
 #HSTS
-#add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload";
+#add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload"; # Uncomment once SSL is live
 
 # https://infosec.mozilla.org/guidelines/web_security#x-content-type-options
 add_header X-Content-Type-Options "nosniff";
@@ -300,7 +396,7 @@ add_header X-XSS-Protection "1; mode=block";
 #  # Deny access to any files with a .php extension in the uploads directory. Works in sub-directory installs and also in multisite network
 #  location ~* ^/(?:uploads|files|wp-content|wp-includes)/.*\\.php\\$ { deny all; }
 #
-#  # Deny access to uploads that aren’t images, videos, music, etc.
+#  # Deny access to uploads that aren't images, videos, music, etc.
 #  location ~* ^/wp-content/uploads/.*.(html|htm|shtml|php|js|swf|css)$ { deny all; }
 
     location = /favicon.ico { try_files /favicon.ico =204; access_log off; log_not_found off; expires max; }
@@ -360,9 +456,9 @@ add_header X-XSS-Protection "1; mode=block";
 ENDD
 
 
-if [[ $varnish -eq 1 ]];then
+if [[ $varnish -eq 1 ]]; then
 
-  if [[ `varnishd -V` ]];then
+  if varnishd -V 2>/dev/null; then
 
     cat > /etc/varnish/default.vcl <<ENDD
 vcl 4.0;
@@ -446,19 +542,19 @@ sub vcl_deliver {
 
 ENDD
 
-else
-  logger "\n::: Varnish NOT installed\n"
-fi
+  else
+    logger "\n::: Varnish NOT installed\n"
+  fi
 
 fi
 
 logger "Creating Nginx links"
 cd /etc/nginx/sites-enabled/
-ln -fs ../sites-available/$1.conf $1.conf
-cd $currentpath
+ln -fs ../sites-available/"$1".conf "$1".conf
+cd "$currentpath"
 logger "Adding pool to php-fpm"
 mkdir -p /etc/php/${PHP_VER}/fpm/pool.d/
-cat > /etc/php/${PHP_VER}/fpm/pool.d/$2.conf <<ENDD
+cat > /etc/php/${PHP_VER}/fpm/pool.d/"$2".conf <<ENDD
 [$2]
 listen.owner = $2
 listen.group = $2
@@ -472,13 +568,22 @@ pm.max_children = 5
 pm.start_servers = 1
 pm.min_spare_servers = 1
 pm.max_spare_servers = 2
-;pm.max_requests = 500
-php_admin_value[cgi.fix_pathinfo] = 0;
+pm.max_requests = 500
+php_admin_value[cgi.fix_pathinfo] = 0
+php_admin_value[error_log] = /var/log/php-fpm_$2.log
+php_admin_flag[log_errors] = on
+slowlog = /var/log/php-fpm_$2_slow.log
+request_slowlog_timeout = 10s
 ENDD
-if  [[ -z `grep "SCRIPT_FILENAME" /etc/nginx/fastcgi_params`  ]];then sed -i '/SCRIPT_NAME/i fastcgi_param  SCRIPT_FILENAME    \$document_root\$fastcgi_script_name;' /etc/nginx/fastcgi_params ;fi
+if ! grep -q "SCRIPT_FILENAME" /etc/nginx/fastcgi_params; then
+  sed -i '/SCRIPT_NAME/i fastcgi_param  SCRIPT_FILENAME    \$document_root\$fastcgi_script_name;' /etc/nginx/fastcgi_params
+fi
 
 servicesReload -q
 
 else
-  echo Usage: $0 domain.com username [webroot]
+  echo "Usage: $0 [-v] domain.com username [webroot]"
+  echo "       $0 -d domain.com username"
+  echo "       $0 -l | -h"
+  exit 1
 fi
