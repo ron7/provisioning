@@ -129,7 +129,7 @@ elif [ -n "${2:-}" ]; then
   useradd -s /bin/false -d /home/"$2" -m -g "$2" "$2"
   if [ "${3:-}" != "" ]; then
     webroot=$3
-    chown -R "$2"."$2" "$webroot"
+    chown -R "$2":"$2" "$webroot"
   else
     webroot=/home/$2/www
     mkdir -p /home/"$2"/www
@@ -137,7 +137,7 @@ elif [ -n "${2:-}" ]; then
     touch /home/"$2"/www/index.php
     touch /home/"$2"/dev/index.php
     chmod 751 "$webroot" /home/"$2"/dev
-    chown -R "$2"."$2" /home/"$2"/*
+    chown -R "$2":"$2" /home/"$2"/*
   fi
   chmod 751 "/home/$2"
 
