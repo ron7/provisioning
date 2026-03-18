@@ -99,6 +99,7 @@ function usage {
   $me -l
   ${red}$me -D {dbname_to_delete} [ -U {DBUser_to_delete} ]${nc}
   $me -c {DBName_to_create} [ -u DBUser_to_create [ -p DBUser_password | ${yellow}if not provided random pass will be generated${nc} ] [ -H DBUser_host | ${yellow}defaults to '%'${nc} ] ]
+  ${bold}(root only)${nc} $me -G {linux_username}   # bootstrap MySQL user + ~/.my.cnf for that user
 
   Available parameters:
 
@@ -106,6 +107,7 @@ function usage {
   -l = ${yellow}FLAG${nc} list databases
   -L = ${yellow}FLAG${nc} list databases extended with users with permissions per DB
   -g = ${yellow}FLAG${nc} upgrade script from GitHub (shows process)
+  -G = (root only) bootstrap a MySQL DB user and create ~/.my.cnf for a linux user
   -c = DB to create
   -u = DBUser to create
   -p = DBUser password to set
@@ -113,18 +115,34 @@ function usage {
   -D = DB to delete
   -U = DB User to delete
 
+  Non-root users: all DB names are automatically prefixed with their linux username.
+  They can only list/create/delete databases with their own prefix.
+  Non-root users cannot create separate MySQL users (-u/-p/-H are ignored);
+  access is via their own MySQL account set up by root with -G.
+
   "
   exit 0
+}
+
+function randpass() {
+  if [ "$2" == "0" ]; then
+    CHAR="[:alnum:]"
+  else
+    CHAR="[:graph:]"
+  fi
+  cat /dev/urandom | tr -cd "$CHAR" | head -c "${1:-32}"
+  echo
 }
 
 # Silent auto-update check (only if file hasn't been modified in 2+ days)
 check_and_update 0 2>/dev/null
 
-while getopts ":D:U:c:u:p:H:hlLgx" flag
+while getopts ":D:U:G:c:u:p:H:hlLgx" flag
 do
   case "${flag}" in
     D) delete_db="${OPTARG}";;
     U) delete_user="${OPTARG}";;
+    G) grant_user="${OPTARG}";;
     c) create_db="${OPTARG}";;
     u) create_user="${OPTARG}";;
     p) create_pass="${OPTARG}";;
@@ -150,34 +168,65 @@ if [ -n "$upgrade_script" ]; then
   fi
 fi
 
+# Determine current user and prefix
+current_user=$(id -un)
+if [ "$current_user" = "root" ] || [ "$EUID" -eq 0 ]; then
+  is_root=1
+  prefix=""
+else
+  is_root=0
+  prefix="${current_user}_"
+fi
+
+# Handle bootstrap of a new MySQL user (root only)
+if [ -n "$grant_user" ]; then
+  if [ "$is_root" -ne 1 ]; then
+    echo -e "${red}Error: -G requires root.${nc}"
+    exit 1
+  fi
+  mysql_pass=$(randpass 20 0)
+  echo -e "${yellow}Bootstrapping MySQL user for linux user '${grant_user}'...${nc}"
+  mysql -e "CREATE USER IF NOT EXISTS '${grant_user}'@'localhost' IDENTIFIED BY '${mysql_pass}';"
+  mysql -e "GRANT ALL PRIVILEGES ON \`${grant_user}\\_%\`.* TO '${grant_user}'@'localhost';"
+  mysql -e "FLUSH PRIVILEGES;"
+  home_dir=$(getent passwd "$grant_user" | cut -d: -f6)
+  if [ -z "$home_dir" ] || [ ! -d "$home_dir" ]; then
+    echo -e "${red}Warning: could not find home dir for '$grant_user'. Write ~/.my.cnf manually:${nc}"
+    echo -e "  [client]\n  user=${grant_user}\n  password=${mysql_pass}"
+  else
+    mycnf="${home_dir}/.my.cnf"
+    printf "[client]\nuser=%s\npassword=%s\n" "$grant_user" "$mysql_pass" > "$mycnf"
+    chmod 600 "$mycnf"
+    chown "${grant_user}" "$mycnf" 2>/dev/null
+    echo -e "${green}Created ${mycnf}${nc}"
+  fi
+  echo -e "${green}Done. '${grant_user}' can now manage databases prefixed with '${grant_user}_'.${nc}"
+  exit 0
+fi
+
 # Check if any option was provided
-if [ -z "$list_dbs" ] && [ -z "$list_dbs_extended" ] && [ -z "$create_db" ] && [ -z "$delete_db" ] && [ -z "$delete_user" ] && [ -z "$upgrade_script" ]; then
+if [ -z "$list_dbs" ] && [ -z "$list_dbs_extended" ] && [ -z "$create_db" ] && [ -z "$delete_db" ] && [ -z "$delete_user" ] && [ -z "$upgrade_script" ] && [ -z "$grant_user" ]; then
   usage
 fi
 
-function randpass() {
-  if [ "$2" == "0" ]; then
-    CHAR="[:alnum:]"
-  else
-    CHAR="[:graph:]"
-  fi
-  cat /dev/urandom | tr -cd "$CHAR" | head -c "${1:-32}"
-  echo
-}
-
 if [ -n "$list_dbs" ];then
   get_dbs="$(mysql -ABNe 'show databases'|grep -vE "^(information_schema|mysql|performance_schema|sys)$")"
-  echo "$get_dbs"
+  if [ -n "$prefix" ]; then
+    echo "$get_dbs" | grep "^${prefix}"
+  else
+    echo "$get_dbs"
+  fi
   exit 0
 fi
 if [ -n "$list_dbs_extended" ];then
-  #user_grants="$(mysql -ABNe 'select Host,User from user' -D mysql|while read -r h u;do mysql -ABNe "show grants for '$u'@'$h'";done|grep -v ' IDENTIFIED BY PASSWORD ')"
   user_grants="$(mysql -ABNe 'select Host,User from user' -D mysql|while read -r h u;do mysql -ABNe "show grants for '$u'@'$h'";done|grep -vP 'GRANT USAGE ON.* IDENTIFIED BY PASSWORD ')"
 
   get_dbs="$(mysql -ABNe 'show databases'|grep -vE "^(information_schema|mysql|performance_schema|sys)$")"
+  if [ -n "$prefix" ]; then
+    get_dbs="$(echo "$get_dbs" | grep "^${prefix}")"
+  fi
   for db in $get_dbs;do
     show_user_grants=''
-    #db_user_grants="$(echo "$user_grants"|grep "\`${db}\`\."|grep -oP " TO \K.*"|sed 's/`//g'|sort -u|xargs)"
     db_user_grants="$(echo "$user_grants"|grep -E "\`${db}\`\.|\*\.\*"|grep -oP " TO \K\S+"|sed 's/`//g'|sort -u|xargs)"
     test -n "$db_user_grants" && show_user_grants=" ${yellow} Users: (${db_user_grants})${nc}"
     echo -e "$db $show_user_grants"
@@ -186,22 +235,30 @@ if [ -n "$list_dbs_extended" ];then
 fi
 
 if [ -n "$delete_db" ];then
+  if [ -n "$prefix" ] && [[ "$delete_db" != "${prefix}"* ]]; then
+    echo -e "${red}Error: you can only delete databases prefixed with '${prefix}' (yours). Requested: '$delete_db'${nc}"
+    exit 1
+  fi
   echo "Deleting dbname: $delete_db"
   mysql -e "DROP DATABASE IF EXISTS $delete_db"
   # exit 0
 fi
 
 if [ -n "$delete_user" ];then
+  if [ -n "$prefix" ] && [[ "$delete_user" != "${prefix}"* ]]; then
+    echo -e "${red}Error: you can only delete users prefixed with '${prefix}' (yours). Requested: '$delete_user'${nc}"
+    exit 1
+  fi
   echo -e "${yellow}Querying user '$delete_user' for all hosts and permissions...${nc}"
-  
+
   # Get all hosts for this user
   user_hosts=$(mysql -ABNe "SELECT Host FROM mysql.user WHERE User='$delete_user'")
-  
+
   if [ -z "$user_hosts" ]; then
     echo -e "${red}User '$delete_user' not found in MySQL.${nc}"
     exit 1
   fi
-  
+
   echo -e "${bold}Found user '$delete_user' with the following hosts:${nc}"
   echo "$user_hosts" | while read -r host; do
     echo -e "  ${green}Host: $host${nc}"
@@ -209,46 +266,56 @@ if [ -n "$delete_user" ];then
     mysql -ABNe "SHOW GRANTS FOR '$delete_user'@'$host'" 2>/dev/null | sed 's/^/    /' | grep -vP 'GRANT USAGE ON.* IDENTIFIED BY PASSWORD ' || echo "    (No grants found)"
     echo
   done
-  
+
   echo -e "${yellow}Deleting user '$delete_user' from all hosts...${nc}"
   echo "$user_hosts" | while read -r host; do
     echo -e "  Deleting ${green}'$delete_user'@'$host'${nc}"
     mysql -e "DROP USER IF EXISTS '$delete_user'@'$host'"
   done
-  
+
   echo -e "${green}Done.${nc}"
   # exit 0
 fi
 
 if [ -n "$create_db" ] ; then
-  #echo first argument is $create_db
-echo "Creating:"
+  # Auto-prepend prefix for non-root users
+  if [ -n "$prefix" ] && [[ "$create_db" != "${prefix}"* ]]; then
+    create_db="${prefix}${create_db}"
+  fi
+  echo "Creating:"
   echo "Database: $create_db"
-  if [ -n "$create_user" ]; then
-    user=$create_user
+
+  if [ "$is_root" -eq 1 ]; then
+    if [ -n "$create_user" ]; then
+      user=$create_user
+    else
+      user=$create_db
+    fi
+    if [ -n "$create_pass" ]; then
+      pass=$create_pass
+    else
+      pass=$(randpass 20 0)
+    fi
+    if [ -n "$create_host" ]; then
+      host=$create_host
+    else
+      host='%'
+    fi
+    echo "User: $user"
+    echo "Pass: $pass"
+    echo "Host: $host"
+    echo "INFO: $(date +"%Y%m%d_%H:%M:%S")_$(id -un)|$create_db|$user|$pass|$host" >> /root/dbusers
+    echo "mysql -e \"create database if not exists $create_db DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci\"" >> /root/dbusers
+    echo "mysql -e \"CREATE USER IF NOT EXISTS '$user'@'$host' identified by '$pass'\"" >> /root/dbusers
+    echo "mysql -e \"GRANT ALL PRIVILEGES ON $create_db.* TO '$user'@'$host'\"" >> /root/dbusers
+    mysql -e "create database if not exists $create_db DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci"
+    mysql -e "CREATE USER IF NOT EXISTS '$user'@'$host' identified by '$pass';"
+    mysql -e "GRANT ALL PRIVILEGES ON $create_db.* TO '$user'@'$host';"
   else
-    user=$create_db
+    # Non-root: only create the DB — the user already has wildcard access to all ${prefix}* DBs
+    # via the grant set up by root with: db -G ${current_user}
+    mysql -e "create database if not exists $create_db DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci"
+    echo -e "${yellow}Note: use your existing MySQL credentials (~/.my.cnf) to access this database.${nc}"
   fi
-  echo "User: $user"
-  if [ -n "$create_pass" ]; then
-    pass=$create_pass
-  else
-    pass=$(randpass 20 0)
-  fi
-  if [ -n "$create_host" ]; then
-    host=$create_host
-  else
-    host='%'
-  fi
-  echo "Pass: $pass"
-  echo "Host: $host"
-  echo "INFO: $(date +"%Y%m%d_%H:%M:%S")_$(id -un)|$create_db|$user|$pass|$host" >> /root/dbusers
-  echo "mysql -e \"create database if not exists $create_db DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci\"" >> /root/dbusers
-  echo "mysql -e \"CREATE USER IF NOT EXISTS '$user'@'$host' identified by '$pass'\"" >> /root/dbusers
-  echo "mysql -e \"GRANT ALL PRIVILEGES ON $create_db.* TO '$user'@'$host'\"" >> /root/dbusers
-  #mysql -e "create database if not exists $create_db"
-  mysql -e "create database if not exists $create_db DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci"
-  mysql -e "CREATE USER IF NOT EXISTS '$user'@'$host' identified by '$pass';"
-  mysql -e "GRANT ALL PRIVILEGES ON $create_db.* TO '$user'@'$host';"
   echo Done.
 fi
