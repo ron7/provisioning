@@ -140,7 +140,9 @@ elif [ -n "${2:-}" ]; then
     echo ":: User '$2' already exists — reusing"
   else
     groupadd -f "$2"
-    useradd -s /bin/false -d /home/"$2" -m -g "$2" "$2"
+    if ! id -u "$2" >/dev/null 2>&1; then
+      useradd -s /bin/false -d /home/"$2" -m -g "$2" "$2"
+    fi
   fi
 
   if [ "${3:-}" != "" ]; then
